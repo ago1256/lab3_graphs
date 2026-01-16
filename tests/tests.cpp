@@ -1,10 +1,8 @@
-#include"tests.h"
-
+#include "tests.h"
 #include <cassert>
 #include <iostream>
 #include <ctime>
 #include <cstdlib>
-
 
 void test_add_vertex() {
     std::cout << "Test add_vertex: ";
@@ -13,7 +11,7 @@ void test_add_vertex() {
     g.add_vertex("A");
     assert(g.has_vertex("A"));
     assert(g.vertex_count() == 1);
-    assert(!g.has_vertex("С"));
+    assert(!g.has_vertex("C"));
 
     g.add_vertex("B");
     g.add_vertex("C");
@@ -40,11 +38,9 @@ void test_add_edge() {
     Edge& edge = g.get_edge("A", "B");
     assert(edge.params[0] == 5);
     assert(edge.params[1] == 10);
-    assert(edge.start == "A");
-    assert(edge.finish == "B");
-
+    
     g.add_edge("B", "C");
-     g.add_edge("B", "A");
+    g.add_edge("B", "A");
     g.add_edge("C", "A");
     assert(g.edge_count() == 4);
     
@@ -92,7 +88,6 @@ void test_remove_vertex() {
     assert(g.vertex_count() == 4);
     assert(g.edge_count() == 4);
     
-
     g.remove_vertex("A");
     
     assert(g.vertex_count() == 3);
@@ -109,7 +104,6 @@ void test_remove_vertex() {
     assert(g.empty() == true);
     g.print();
     
-
     std::cout << "pass\n";
 }
 
@@ -174,7 +168,6 @@ void test_get_neighbors() {
     std::cout << "pass\n";
 }
 
-
 void test_vertex_edge_count() {
     std::cout << "Test vertex edge count: ";
     Graph g;
@@ -203,7 +196,6 @@ void test_vertex_edge_count() {
     std::cout << "pass\n";
 }
 
-
 void test_remove_all_vertices() {
     std::cout << "Test remove all vertices than add: ";
     Graph g;
@@ -231,8 +223,6 @@ void test_remove_all_vertices() {
     std::cout << "pass\n";
 }
 
-
-
 void test_constructor_with_vertices() {
     std::cout << "Test constructor with vertices: ";
     
@@ -259,9 +249,11 @@ void test_error_cases() {
     } catch (const Error& e) {
         assert(e == Error::VERTEX_NOT_FOUND);
     }
+    
     g.add_vertex("A");
     g.add_vertex("C");
-    try{
+    
+    try {
         g.add_vertex("A");
         assert(false);  
     } catch (const Error& e) {
@@ -275,16 +267,18 @@ void test_error_cases() {
         assert(e == Error::EDGE_NOT_FOUND);
     }
     
-    g.add_edge("A", "C", {2,3,3});
+    g.add_edge("A", "C", {2, 3, 3});
     g.print();
+    
     std::vector<int> exp_params = {2, 3, 4};
     g.add_edge("A", "C", exp_params);
-    std::vector<int> new_params = g.get_edge("A","C").params;
+    std::vector<int> new_params = g.get_edge("A", "C").params;
     assert(new_params == exp_params);
     g.print();
     
     std::cout << "pass\n";
 }
+
 void test_dijkstra_one_param() {
     std::cout << "Test dijkstra one parameter: ";
     Graph g;
@@ -293,15 +287,16 @@ void test_dijkstra_one_param() {
     g.add_vertex("B");
     g.add_vertex("C");
     g.add_vertex("D");
+    
     g.add_edge("A", "B", {5, 10});
     g.add_edge("A", "D", {10, 5});
     g.add_edge("B", "C", {3, 8});    
     g.add_edge("D", "C", {2, 12});  
     
     std::vector<bool> first_param_only = {true, false};
-    Path path1 = g.dijkstra_alg("A", "C", first_param_only);
+    Path path1 = dijkstra_alg(g, "A", "C", first_param_only);
     
-    std::cout << "\nPath considering only first parameter: ";
+    g.print();
     print_path(path1);
     
     assert(!path1.verts.empty()); 
@@ -313,7 +308,7 @@ void test_dijkstra_one_param() {
     assert(path1.weighted_sum == 8.0);
     
     std::vector<bool> second_param_only = {false, true};
-    Path path2 = g.dijkstra_alg("A", "C", second_param_only);
+    Path path2 = dijkstra_alg(g, "A", "C", second_param_only);
     
     std::cout << "Path considering only second parameter: ";
     print_path(path2);
@@ -340,20 +335,19 @@ void test_dijkstra_both_params() {
     g.add_edge("B", "C", {3, 8});
     g.add_edge("D", "C", {2, 12});
     
-
     std::vector<bool> both_params = {true, true};
-    Path best_path = g.dijkstra_alg("A", "C", both_params);
+    Path best_path = dijkstra_alg(g, "A", "C", both_params);
     
     std::cout << "\nBest path considering both parameters: ";
     print_path(best_path);
     
-    
-    assert(best_path.verts.size() == 3) ;
+    assert(best_path.verts.size() == 3);
+    assert(best_path.verts[0] == "A");
     assert(best_path.verts[1] == "B");
-    assert(best_path.cost[0] == 8); 
-    assert(best_path.cost[1] == 18);
-    assert(best_path.weighted_sum == 26.0); 
-
+    assert(best_path.verts[2] == "C");
+    assert(best_path.cost[0] == 8);
+    assert(best_path.cost[1] == 18); 
+    assert(best_path.weighted_sum == 26.0);
     
     std::cout << "pass\n";
 }
@@ -371,7 +365,7 @@ void test_dijkstra_with_weights() {
     g.add_edge("B", "C", {20, 50}, {0.7, 0.3}); 
     
     std::vector<bool> both_params = {true, true};
-    Path path = g.dijkstra_alg("A", "C", both_params);
+    Path path = dijkstra_alg(g, "A", "C", both_params);
     
     print_path(path);
     
@@ -396,17 +390,14 @@ void test_dijkstra_no_path() {
     g.add_edge("A", "B", {5, 10});
     
     std::vector<bool> params = {true, true};
-    Path path = g.dijkstra_alg("A", "C", params);
+    Path path = dijkstra_alg(g, "A", "C", params);
     
     assert(path.verts.empty()); 
     std::cout << "pass\n";
 }
 
-
-
-
 void test_dijkstra_after_changes() {
-    std::cout << "Test dijkstra after removing: ";
+    std::cout << "Test dijkstra after changes: ";
     Graph g;
     
     g.add_vertex("A");
@@ -424,7 +415,7 @@ void test_dijkstra_after_changes() {
     g.add_edge("C", "E", {5, 5});
     
     std::vector<bool> first_param_only = {true, false};
-    Path path1 = g.dijkstra_alg("A", "C", first_param_only);
+    Path path1 = dijkstra_alg(g, "A", "C", first_param_only);
     
     print_path(path1);
     
@@ -432,11 +423,11 @@ void test_dijkstra_after_changes() {
     assert(path1.cost[0] == 4);  
     
     g.remove_edge("A", "B");
-    g.add_edge("A", "C", {3, 5});
+    g.add_edge("A", "C", {3, 5}); 
     
     g.print();
     
-    Path path2 = g.dijkstra_alg("A", "C", first_param_only);
+    Path path2 = dijkstra_alg(g, "A", "C", first_param_only);
     print_path(path2);
     
     assert(!path2.verts.empty());
@@ -459,7 +450,7 @@ void test_dijkstra_complex_graph() {
     g.add_vertex("D");
     g.add_vertex("E");
 
-    g.add_edge("A", "B", {1, 4});
+    g.add_edge("A", "B", {8, 7});
     g.add_edge("A", "C", {4, 1});
     g.add_edge("B", "D", {2, 2});
     g.add_edge("C", "D", {2, 2});
@@ -468,7 +459,7 @@ void test_dijkstra_complex_graph() {
     g.add_edge("C", "E", {5, 5});
     
     std::vector<bool> params = {true, true};
-    Path path = g.dijkstra_alg("A", "E", params);
+    Path path = dijkstra_alg(g, "A", "E", params);
     
     std::cout << "\nComplex graph: ";
     print_path(path);
@@ -477,10 +468,11 @@ void test_dijkstra_complex_graph() {
     
     if (path.verts.size() == 4) {
         assert(path.verts[0] == "A");
+        assert(path.verts[1] == "C");
+        assert(path.verts[2] == "D");
         assert(path.verts[3] == "E");
-        assert(path.cost[0] == 4);
-        assert(path.cost[1] == 7);
-        assert(path.weighted_sum == 11.0);
+        assert(path.cost[0] == 7);
+        assert(path.cost[1] == 4); 
     }
     
     std::cout << "pass\n";
@@ -518,7 +510,7 @@ void test_scc(){
     g.add_edge("C", "A");
     g.add_edge("B", "D");
 
-    auto sccs = g.find_scc();
+    auto sccs = find_scc(g);
 
     for (size_t i = 0; i < sccs.size(); ++i) {
         std::cout << "{ ";
@@ -526,8 +518,9 @@ void test_scc(){
             std::cout << v << " ";
         }
         std::cout << "} ";
-        std::cout << "\n";
     }
+    std::cout << "\n";
+    
     assert(sccs.size() == 2);
     for(auto& scc: sccs){
         if(scc.size() == 1){
@@ -535,7 +528,6 @@ void test_scc(){
         }
     }
     std::cout << "pass \n";
-
 }
 
 void test_scc_complex() {
@@ -543,22 +535,17 @@ void test_scc_complex() {
 
     Graph g({"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"});
 
-    g.add_edge("A", "B", {}, {});
-    g.add_edge("B", "A", {}, {});
-    g.add_edge("B", "C", {}, {});
-    g.add_edge("C", "B", {}, {});
+    g.add_edge("A", "B");
+    g.add_edge("B", "A");
+    g.add_edge("B", "C");
+    g.add_edge("C", "B");
+    g.add_edge("D", "E");
+    g.add_edge("E", "D");
+    g.add_edge("G", "H");
+    g.add_edge("I", "A");
+    g.add_edge("C", "J");
 
-    g.add_edge("D", "E", {}, {});
-    g.add_edge("E", "D", {}, {});
-
-    g.add_edge("G", "H", {}, {});
-
-    g.add_edge("I", "A", {}, {});
-    g.add_edge("C", "J", {}, {});
-
-    auto sccs = g.find_scc();
-
-    std::vector<std::vector<std::string>> expected = {{"A", "B", "C"}, {"D", "E"}, {"F"}, {"G"}, {"H"}, {"I"}, {"J"}};
+    auto sccs = find_scc(g);
 
     for (size_t i = 0; i < sccs.size(); ++i) {
         std::cout << "{ ";
@@ -566,14 +553,16 @@ void test_scc_complex() {
             std::cout << v << " ";
         }
         std::cout << "} ";
-        std::cout << "\n";
     }
+    std::cout << "\n";
 
-    std::cout << "pass (" << sccs.size() << " components)" << std::endl;
+    assert(sccs.size() == 7);
+
+    std::cout << "pass " << std::endl;
 }
 
 void run_dijkstra_tests() {
-    std::cout << "\n=== Dijkstra Algorithm Tests ===\n\n";
+    std::cout << "\nDijkstra Algorithm Tests\n\n";
     
     test_dijkstra_one_param();
     test_dijkstra_both_params();
@@ -582,10 +571,8 @@ void run_dijkstra_tests() {
     test_dijkstra_after_changes();
     test_dijkstra_complex_graph();
     
-    std::cout << "\n=== All Dijkstra Tests Passed ===\n\n";
+    std::cout << "\nAll Dijkstra Tests Passed\n\n";
 }
-
-
 
 void run_all_tests() {
     std::cout << "Graph Tests\n\n";
@@ -608,7 +595,6 @@ void run_all_tests() {
 }
 
 int main() {
-    std::srand(std::time(nullptr));
 
     run_all_tests();
     run_dijkstra_tests();

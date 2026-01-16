@@ -18,6 +18,7 @@
 #include <QScrollArea>
 #include <unordered_map>
 #include "../graph/graph.h"
+#include "../algorithms/algorithms.h"
 #include "customscene.h"
 #include "draggablevertex.h"
 
@@ -59,12 +60,16 @@ private:
     void updateSelectionInfo();
     void updateFlightInfo(const std::string& from, const std::string& to);
     
-    std::string findCityAtPos(const QPointF& pos);
-    std::pair<std::string, std::string> findFlightAtPos(const QPointF& pos);
+    std::string findCityAtPos(const QPointF& pos);  
+    std::pair<std::string, std::string> findFlightAtPos(const QPointF& pos);  
     
     void drawFlightLine(const Edge& edge);
     void loadMapToScene();
     
+    std::string getNameById(const std::string& id) const;
+    std::string getIdByName(const std::string& name) const;
+    std::string getEdgeId(const std::string& fromName, const std::string& toName) const;
+
     QGraphicsView *graphicsView;
     CustomScene *scene;
     QSplitter *mainSplitter;
@@ -103,9 +108,14 @@ private:
     std::unordered_map<std::string, QPointF> cityPositions;
     std::unordered_map<std::string, QGraphicsLineItem*> flightLines;
     std::unordered_map<std::string, QGraphicsPolygonItem*> flightArrows;
-  
-    std::string selectedCity;
-    std::pair<std::string, std::string> selectedFlight;
+
+    QDoubleSpinBox *weightCostSpin;
+    QDoubleSpinBox *weightTimeSpin;
+    QDoubleSpinBox *weightVisaSpin;
+    QGroupBox *weightsGroup;
+
+    std::string selectedCity;  
+    std::pair<std::string, std::string> selectedFlight; 
     bool isCitySelected;
 
     Graph *graph;

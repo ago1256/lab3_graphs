@@ -28,6 +28,8 @@ set(GRAPH_SOURCES
     structs_for_graph/structs_for_graph.h
     errors/errors.cpp
     errors/errors.h
+    algorithms/algorithms.cpp      
+    algorithms/algorithms.h  
 )
 
 add_executable(GraphVisualizer WIN32
@@ -40,7 +42,9 @@ target_include_directories(GraphVisualizer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/graph
     ${CMAKE_CURRENT_SOURCE_DIR}/structs_for_graph
     ${CMAKE_CURRENT_SOURCE_DIR}/errors
-    ${CMAKE_CURRENT_SOURCE_DIR}/ui    
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui  
+    ${CMAKE_CURRENT_SOURCE_DIR}/algorithms  
+    ${CMAKE_CURRENT_SOURCE_DIR}/data
 )
 
 target_link_libraries(GraphVisualizer PRIVATE

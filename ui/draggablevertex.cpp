@@ -6,7 +6,7 @@
 DraggableVertex::DraggableVertex(const QString& name, QGraphicsItem *parent)
     : QGraphicsEllipseItem(parent), vertexName(name), isDragging(false)
 {
-    setRect(-12, -12, 24, 24);
+    setRect(-10, -10, 20, 20);
     setBrush(QBrush(QColor(100, 150, 255)));
     setPen(QPen(Qt::darkBlue, 1));
     

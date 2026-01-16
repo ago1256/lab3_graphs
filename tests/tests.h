@@ -3,7 +3,7 @@
 #include "../graph/graph.h"
 #include "../errors/errors.h"
 #include "../structs_for_graph/structs_for_graph.h"
-
+#include "../algorithms/algorithms.h"
     
 void test_add_vertex();
 void test_add_edge();

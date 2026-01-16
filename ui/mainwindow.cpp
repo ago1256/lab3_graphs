@@ -11,10 +11,8 @@
 #include <QGraphicsSimpleTextItem>
 #include <QPen>
 #include <QBrush>
-#include <QDebug>
 #include <QFile>
 #include <QTextStream>
-#include <QDir>
 #include <QGroupBox>
 #include <QFrame>
 #include <QMenu>
@@ -52,6 +50,9 @@ MainWindow::MainWindow(QWidget *parent)
       checkCost(nullptr),
       checkTime(nullptr),
       checkVisa(nullptr),
+      weightCostSpin(nullptr),
+      weightTimeSpin(nullptr),
+      weightVisaSpin(nullptr),
       addCityBtn(nullptr),
       addFlightBtn(nullptr),
       findPathBtn(nullptr),
@@ -64,32 +65,21 @@ MainWindow::MainWindow(QWidget *parent)
       mainSplitter(nullptr),
       mapBackground(nullptr) 
 {
-    qDebug() << "MainWindow constructor start";
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
     
     try {
         setupUI();
-        qDebug() << "UI setup complete";
-
         loadMapToScene();
-        qDebug() << "Map loaded";
-        
         loadDefaultGraph();
-        qDebug() << "Default graph loaded";
-        
         drawGraph();
-        qDebug() << "Graph drawn";
         
-        setWindowTitle("Граф городов с изменяемыми координатами");
+        setWindowTitle("Граф городов");
         resize(1400, 850);
         setMinimumSize(1100, 700);
         
-        qDebug() << "MainWindow constructor end";
     } catch (const std::exception& e) {
-        qDebug() << "Exception in constructor:" << e.what();
         QMessageBox::critical(nullptr, "Ошибка", QString("Ошибка при создании окна: %1").arg(e.what()));
     } catch (...) {
-        qDebug() << "Unknown exception in constructor";
         QMessageBox::critical(nullptr, "Ошибка", "Неизвестная ошибка при создании окна");
     }
 }
@@ -101,8 +91,6 @@ MainWindow::~MainWindow()
 
 void MainWindow::setupUI()
 {
-    qDebug() << "Setting up UI...";
-    
     try {
         QWidget *centralWidget = new QWidget(this);
         setCentralWidget(centralWidget);
@@ -223,37 +211,77 @@ void MainWindow::setupUI()
         flightLayout->addWidget(addFlightBtn, 5, 0, 1, 2);
         
         QGroupBox *pathGroup = new QGroupBox("Поиск пути", rightPanel);
+        pathGroup->setMaximumHeight(160);
         QVBoxLayout *pathLayout = new QVBoxLayout(pathGroup);
-        pathLayout->setContentsMargins(6, 8, 6, 6);
+        pathLayout->setContentsMargins(8, 8, 8, 8);
         pathLayout->setSpacing(6);
-        
-        QWidget *checkWidget = new QWidget(pathGroup);
-        QHBoxLayout *checkLayout = new QHBoxLayout(checkWidget);
-        checkLayout->setContentsMargins(0, 0, 0, 0);
-        checkLayout->setSpacing(10);
-        
-        checkCost = new QCheckBox("Стоимость", checkWidget);
-        checkTime = new QCheckBox("Время", checkWidget);
-        checkVisa = new QCheckBox("Виза", checkWidget);
+
+        QHBoxLayout *checkRow = new QHBoxLayout();
+        checkRow->setSpacing(10);
+
+        checkCost = new QCheckBox("стоимость", pathGroup);
+        checkTime = new QCheckBox("время", pathGroup);
+        checkVisa = new QCheckBox("виза", pathGroup);
         checkCost->setChecked(true);
         checkTime->setChecked(true);
         checkVisa->setChecked(false);
-        
-        checkCost->setStyleSheet("QCheckBox { font-size: 8pt; }");
-        checkTime->setStyleSheet("QCheckBox { font-size: 8pt; }");
-        checkVisa->setStyleSheet("QCheckBox { font-size: 8pt; }");
-        
-        checkLayout->addWidget(checkCost);
-        checkLayout->addWidget(checkTime);
-        checkLayout->addWidget(checkVisa);
-        checkLayout->addStretch(1);
-        
+
+        checkCost->setFixedSize(80, 20);
+        checkTime->setFixedSize(80, 20);
+        checkVisa->setFixedSize(80, 20);
+
+        checkCost->setStyleSheet("QCheckBox { font-size: 9pt; }");
+        checkTime->setStyleSheet("QCheckBox { font-size: 9pt; }");
+        checkVisa->setStyleSheet("QCheckBox { font-size: 9pt; }");
+
+        checkRow->addWidget(checkCost);
+        checkRow->addWidget(checkTime);
+        checkRow->addWidget(checkVisa);
+        checkRow->addStretch(1);
+
+        QHBoxLayout *weightRow = new QHBoxLayout();
+        weightRow->setSpacing(10);
+
+        weightCostSpin = new QDoubleSpinBox(pathGroup);
+        weightCostSpin->setRange(0.0, 1.0);
+        weightCostSpin->setSingleStep(0.1);
+        weightCostSpin->setValue(1.0);
+        weightCostSpin->setDecimals(1);
+        weightCostSpin->setFixedSize(55, 22);
+        weightCostSpin->setStyleSheet("QDoubleSpinBox { font-size: 8pt; }");
+
+        weightTimeSpin = new QDoubleSpinBox(pathGroup);
+        weightTimeSpin->setRange(0.0, 1.0);
+        weightTimeSpin->setSingleStep(0.1);
+        weightTimeSpin->setValue(1.0);
+        weightTimeSpin->setDecimals(1);
+        weightTimeSpin->setFixedSize(55, 22);
+        weightTimeSpin->setStyleSheet("QDoubleSpinBox { font-size: 8pt; }");
+
+        weightVisaSpin = new QDoubleSpinBox(pathGroup);
+        weightVisaSpin->setRange(0.0, 1.0);
+        weightVisaSpin->setSingleStep(0.1);
+        weightVisaSpin->setValue(1.0);
+        weightVisaSpin->setDecimals(1);
+        weightVisaSpin->setFixedSize(55, 22);
+        weightVisaSpin->setStyleSheet("QDoubleSpinBox { font-size: 8pt; }");
+
+        QLabel *weightLabel = new QLabel("Веса:", pathGroup);
+        weightLabel->setStyleSheet("QLabel { font-size: 8pt; }");
+
+        weightRow->addWidget(weightLabel);
+        weightRow->addWidget(weightCostSpin);
+        weightRow->addWidget(weightTimeSpin);
+        weightRow->addWidget(weightVisaSpin);
+        weightRow->addStretch(1);
+
         findPathBtn = new QPushButton("Найти путь", pathGroup);
-        findPathBtn->setMinimumHeight(30);
-        
-        pathLayout->addWidget(checkWidget);
+        findPathBtn->setFixedHeight(28);
+
+        pathLayout->addLayout(checkRow);
+        pathLayout->addLayout(weightRow);
         pathLayout->addWidget(findPathBtn);
-        
+            
         QGroupBox *resultGroup = new QGroupBox("Результаты", rightPanel);
         QVBoxLayout *resultLayout = new QVBoxLayout(resultGroup);
         resultLayout->setContentsMargins(6, 8, 6, 6);
@@ -300,7 +328,7 @@ void MainWindow::setupUI()
         controlLayout->addWidget(clearBtn);
         controlLayout->addWidget(colorSCCBtn);  
         controlLayout->addWidget(resetColorsBtn);
-        
+
         rightLayout->addWidget(selectionInfoGroup);
         rightLayout->addWidget(addCityGroup);
         rightLayout->addWidget(flightGroup);
@@ -333,27 +361,20 @@ void MainWindow::setupUI()
         updateComboBoxes();
         clearSelection();
         
-        qDebug() << "UI setup completed successfully";
-        
     } catch (const std::exception& e) {
-        qDebug() << "Exception in setupUI:" << e.what();
         throw;
     }
 }
 
 void MainWindow::drawGraph()
 {
-    qDebug() << "Drawing graph...";
-    
     if (!scene) {
-        qDebug() << "Scene is null!";
         return;
     }
     
     try {
-           QList<QGraphicsItem*> items = scene->items();
+        QList<QGraphicsItem*> items = scene->items();
         for (QGraphicsItem* item : items) {
-
             if (item != mapBackground && item->zValue() >= -90) {
                 scene->removeItem(item);
                 delete item;
@@ -364,8 +385,7 @@ void MainWindow::drawGraph()
         cityPositions.clear();
         flightLines.clear();
         flightArrows.clear();
-        clearSelection();
-        
+            
         const auto& vertices = graph->get_all_vertices();
         int vertexCount = vertices.size();
         
@@ -393,8 +413,10 @@ void MainWindow::drawGraph()
         int sceneHeight = 800;
         scene->setSceneRect(0, 0, sceneWidth, sceneHeight);
         
-        for (const auto& vertex : vertices) {
-            const Vertex& v = vertex.second;
+        for (const auto& vertex_pair : vertices) {
+            const Vertex& v = vertex_pair.second;
+            const std::string& vertex_name = v.name;
+            
             int x = v.x;
             int y = v.y;
             
@@ -403,27 +425,25 @@ void MainWindow::drawGraph()
                 y = 100 + std::rand() % (sceneHeight - 200);
                 
                 try {
-                    graph->set_vertex_position(vertex.first, x, y);
+                    graph->set_vertex_position(vertex_name, x, y);
                 } catch (...) {
-
                 }
             }
             
-            DraggableVertex *circle = new DraggableVertex(QString::fromStdString(vertex.first));
+            DraggableVertex *circle = new DraggableVertex(QString::fromStdString(vertex_name));
             if (!circle) {
-                qDebug() << "Failed to create circle for vertex:" << QString::fromStdString(vertex.first);
                 continue;
             }
             
             circle->setPos(x, y);
-            circle->setZValue(10); 
+            circle->setZValue(10);
             scene->addItem(circle);
             
-            cityCircles[vertex.first] = circle;
-            cityPositions[vertex.first] = QPointF(x, y);
+            cityCircles[vertex_name] = circle;
+            cityPositions[vertex_name] = QPointF(x, y);
             
             QGraphicsSimpleTextItem *text = new QGraphicsSimpleTextItem(
-                QString::fromStdString(vertex.first));
+                QString::fromStdString(vertex_name));
             QFont font = text->font();
             font.setPointSize(10);
             font.setBold(true);
@@ -434,51 +454,64 @@ void MainWindow::drawGraph()
         }
         
         const auto& edges = graph->get_all_edges();
-        qDebug() << "Edge count:" << edges.size();
         
         for (const auto& edge : edges) {
             drawFlightLine(edge.second);
         }
         
         if (pathResultLabel) {
-            pathResultLabel->setText("Граф ");
+            pathResultLabel->setText("Граф");
         }
         if (sccDetailsText) {
             sccDetailsText->clear();
-            sccDetailsText->setHtml(
-                "<div style='padding: 10px; color: #666; text-align: center; font-size: 10pt;'>"
-                " "
-                "</div>"
-            );
         }
         
         updateComboBoxes();
         
-        qDebug() << "Graph drawing complete";
-        
     } catch (const std::exception& e) {
-        qDebug() << "Exception in drawGraph:" << e.what();
         QMessageBox::warning(this, "Ошибка", QString("Ошибка при отрисовке графа: %1").arg(e.what()));
     }
 }
 
 void MainWindow::drawFlightLine(const Edge& edge)
 {
-    auto fromIt = cityPositions.find(edge.start);
-    auto toIt = cityPositions.find(edge.finish);
+    std::string from_name = graph->get_vertex_name_by_id(edge.start);
+    std::string to_name = graph->get_vertex_name_by_id(edge.finish);
     
-    if (fromIt == cityPositions.end() || toIt == cityPositions.end()) {
+    if (from_name.empty() || to_name.empty()) {
         return;
     }
     
-    QPointF fromPos = fromIt->second;
-    QPointF toPos = toIt->second;
+    auto from_it = cityPositions.find(from_name);
+    auto to_it = cityPositions.find(to_name);
+    
+    if (from_it == cityPositions.end() || to_it == cityPositions.end()) {
+        return;
+    }
+    
+    QPointF fromPos = from_it->second;
+    QPointF toPos = to_it->second;
+    
+    std::string edge_key = from_name + "_" + to_name;
+    
+    if (flightLines.find(edge_key) != flightLines.end()) {
+        scene->removeItem(flightLines[edge_key]);
+        delete flightLines[edge_key];
+        flightLines.erase(edge_key);
+    }
+    if (flightArrows.find(edge_key) != flightArrows.end()) {
+        scene->removeItem(flightArrows[edge_key]);
+        delete flightArrows[edge_key];
+        flightArrows.erase(edge_key);
+    }
     
     double dx = toPos.x() - fromPos.x();
     double dy = toPos.y() - fromPos.y();
     double length = sqrt(dx*dx + dy*dy);
     
-    if (length == 0) return;
+    if (length == 0) {
+        return;
+    }
     
     double offset = 15;
     double startX = fromPos.x() + (dx / length) * offset;
@@ -487,13 +520,15 @@ void MainWindow::drawFlightLine(const Edge& edge)
     double endY = toPos.y() - (dy / length) * offset;
     
     QGraphicsLineItem *line = new QGraphicsLineItem(startX, startY, endX, endY);
-    if (!line) return;
+    if (!line) {
+        return;
+    }
     
     line->setPen(QPen(QColor(80, 80, 80), 2, Qt::SolidLine, Qt::RoundCap));
     line->setZValue(1);
     scene->addItem(line);
     
-    flightLines[edge.name] = line;
+    flightLines[edge_key] = line;
     
     double angle = atan2(dy, dx);
     double arrowSize = 6;
@@ -512,19 +547,15 @@ void MainWindow::drawFlightLine(const Edge& edge)
     arrow->setZValue(2);
     scene->addItem(arrow);
     
-    flightArrows[edge.name] = arrow;
+    flightArrows[edge_key] = arrow;
 }
 
 void MainWindow::loadDefaultGraph()
 {
-    qDebug() << "Loading default graph...";
-    
     try {
         QString citiesFile = "data/data_for_graph.txt";
         
         if (!QFile::exists(citiesFile)) {
-            qDebug() << "Cities file not found at:" << citiesFile;
-            
             QStringList possiblePaths = {
                 "data/data_for_graph.txt",
                 "../data/data_for_graph.txt",
@@ -537,14 +568,12 @@ void MainWindow::loadDefaultGraph()
                 if (QFile::exists(path)) {
                     citiesFile = path;
                     fileFound = true;
-                    qDebug() << "Found file at:" << path;
                     break;
                 }
             }
             
             if (!fileFound) {
-                qDebug() << "No cities file found. Starting with empty graph.";
-                return; 
+                return;
             }
         }
         
@@ -553,35 +582,23 @@ void MainWindow::loadDefaultGraph()
             QTextStream in(&file);
             std::vector<std::string> cities;
             
-            qDebug() << "Reading cities from file:" << citiesFile;
-            
             while (!in.atEnd()) {
                 QString line = in.readLine().trimmed();
                 if (!line.isEmpty()) {
                     cities.push_back(line.toStdString());
-                    qDebug() << "City from file:" << line;
                 }
             }
             file.close();
             
-            qDebug() << "Total cities read:" << cities.size();
-            
             if (!cities.empty()) {
                 try {
-                    graph->generate_graph(cities, 20, 3);
-                    qDebug() << "Graph generated successfully";
+                    graph->generate_graph(cities, 17, 3);
                 } catch (const std::exception& e) {
-                    qDebug() << "Error generating graph:" << e.what();
                 }
-            } else {
-                qDebug() << "Cities file is empty";
             }
-        } else {
-            qDebug() << "Failed to open file:" << citiesFile;
         }
         
     } catch (const std::exception& e) {
-        qDebug() << "Exception in loadDefaultGraph:" << e.what();
     }
 }
 
@@ -617,16 +634,22 @@ void MainWindow::onAddCity()
 
 void MainWindow::onAddFlight()
 {
-    QString from = fromCombo->currentText();
-    QString to = toCombo->currentText();
+    QString from_name = fromCombo->currentText();
+    QString to_name = toCombo->currentText();
     
-    if (from.isEmpty() || to.isEmpty()) {
+    if (from_name.isEmpty() || to_name.isEmpty()) {
         QMessageBox::warning(this, "Ошибка", "Выберите города");
         return;
     }
     
-    if (from == to) {
+    if (from_name == to_name) {
         QMessageBox::warning(this, "Ошибка", "Города должны быть разными");
+        return;
+    }
+    
+    if (!graph->has_vertex(from_name.toStdString()) || 
+        !graph->has_vertex(to_name.toStdString())) {
+        QMessageBox::warning(this, "Ошибка", "Один из городов не найден");
         return;
     }
     
@@ -636,11 +659,13 @@ void MainWindow::onAddFlight()
         visaSpin->value()
     };
     
+    std::vector<double> weights; 
+    
     try {
-        graph->add_edge(from.toStdString(), to.toStdString(), params);
+        graph->add_edge(from_name.toStdString(), to_name.toStdString(), params, weights);
         drawGraph();
         updateComboBoxes();
-        selectFlight(from.toStdString(), to.toStdString());
+        selectFlight(from_name.toStdString(), to_name.toStdString());
     } catch (const std::exception& e) {
         QMessageBox::warning(this, "Ошибка", QString("Ошибка: %1").arg(e.what()));
     }
@@ -661,14 +686,20 @@ void MainWindow::onFindPath()
         return;
     }
     
-    std::vector<bool> params = {
+    std::vector<bool> consider_params = {
         checkCost->isChecked(),
         checkTime->isChecked(),
         checkVisa->isChecked()
     };
     
+    std::vector<double> weights = {
+        weightCostSpin->value(),
+        weightTimeSpin->value(),
+        weightVisaSpin->value()
+    };
+    
     try {
-        Path path = graph->dijkstra_alg(from.toStdString(), to.toStdString(), params);
+        Path path = dijkstra_alg(*graph, from.toStdString(), to.toStdString(), consider_params);
         
         if (path.verts.empty()) {
             pathResultLabel->setText("Путь не найден");
@@ -686,18 +717,42 @@ void MainWindow::onFindPath()
             
             pathResultLabel->setText("Путь найден:");
             
+            double weighted_sum = 0.0;
+            for (size_t i = 0; i < path.cost.size() && i < weights.size(); ++i) {
+                if (consider_params[i]) {
+                    weighted_sum += path.cost[i] * weights[i];
+                }
+            }
+            
             QString htmlDetails = "<div style='padding: 8px; color: #2c3e50; font-size: 10pt; line-height: 1.4;'>";
             htmlDetails += "<b>Маршрут:</b><br>";
             htmlDetails += pathStr + "<br><br>";
             htmlDetails += "<b>Параметры:</b><br>";
-
-            htmlDetails += QString("• Стоимость: $%1<br>").arg(path.cost[0]);
-            htmlDetails += QString("• Время: %1 ч<br>").arg(path.cost[1]);
-            htmlDetails += QString("• Виза: $%1<br>").arg(path.cost[2]);
-
-            htmlDetails += QString("<br><b>Взвешенная сумма: %1</b>").arg(path.weighted_sum);
+            
+            htmlDetails += QString("• Стоимость: $%1").arg(path.cost[0]);
+            if (checkCost->isChecked()) {
+                htmlDetails += QString(" (вес: %1 = %2)").arg(weights[0], 0, 'f', 1)
+                                                 .arg(path.cost[0] * weights[0], 0, 'f', 2);
+            }
+            htmlDetails += "<br>";
+            
+            htmlDetails += QString("• Время: %1 ч").arg(path.cost[1]);
+            if (checkTime->isChecked()) {
+                htmlDetails += QString(" (вес: %1 = %2)").arg(weights[1], 0, 'f', 1)
+                                                 .arg(path.cost[1] * weights[1], 0, 'f', 2);
+            }
+            htmlDetails += "<br>";
+            
+            htmlDetails += QString("• Виза: $%1").arg(path.cost[2]);
+            if (checkVisa->isChecked()) {
+                htmlDetails += QString(" (вес: %1 = %2)").arg(weights[2], 0, 'f', 1)
+                                                 .arg(path.cost[2] * weights[2], 0, 'f', 2);
+            }
+            htmlDetails += "<br><br>";
+            
+            htmlDetails += QString("<b>Взвешенная сумма: %1</b>").arg(weighted_sum, 0, 'f', 2);
+            
             htmlDetails += "</div>";
-
             sccDetailsText->setHtml(htmlDetails);
             
             clearSelection();
@@ -718,6 +773,7 @@ void MainWindow::onFindPath()
                 }
             }
         }
+        
     } catch (const std::exception& e) {
         QMessageBox::warning(this, "Ошибка", QString("Ошибка: %1").arg(e.what()));
     }
@@ -771,12 +827,13 @@ void MainWindow::updateComboBoxes()
     fromCombo->clear();
     toCombo->clear();
     
-    const auto& vertices = graph->get_all_vertices();
-    for (const auto& vertex : vertices) {
-        QString name = QString::fromStdString(vertex.first);
-        cityCombo->addItem(name);
-        fromCombo->addItem(name);
-        toCombo->addItem(name);
+    std::vector<std::string> cityNames = graph->get_all_vertex_names();
+    
+    for (const auto& name : cityNames) {
+        QString qname = QString::fromStdString(name);
+        cityCombo->addItem(qname);
+        fromCombo->addItem(qname);
+        toCombo->addItem(qname);
     }
     
     if (!currentCity.isEmpty() && cityCombo->findText(currentCity) != -1)
@@ -838,7 +895,7 @@ void MainWindow::editSelectedCity()
         
         if (!newName.isEmpty() && newName != QString::fromStdString(selectedCity)) {
             try {
-                graph->change_vertex(selectedCity, newName.toStdString());
+                graph->rename_vertex(selectedCity, newName.toStdString());
                 drawGraph();
                 updateComboBoxes();
                 selectCity(newName.toStdString());
@@ -870,26 +927,26 @@ void MainWindow::editSelectedFlight()
             layout->setContentsMargins(15, 15, 15, 15);
             layout->setSpacing(12);
             
-            QHBoxLayout *costLayout = new QHBoxLayout();
-            costLayout->addWidget(new QLabel("Стоимость ($):"));
+            QGroupBox *paramsGroup = new QGroupBox("Параметры");
+            QGridLayout *paramsLayout = new QGridLayout(paramsGroup);
+            
+            paramsLayout->addWidget(new QLabel("Стоимость ($):"), 0, 0);
             QSpinBox *newCostSpin = new QSpinBox();
             newCostSpin->setRange(0, 10000);
             newCostSpin->setValue(edge.params.size() > 0 ? edge.params[0] : costSpin->value());
-            costLayout->addWidget(newCostSpin);
+            paramsLayout->addWidget(newCostSpin, 0, 1);
             
-            QHBoxLayout *timeLayout = new QHBoxLayout();
-            timeLayout->addWidget(new QLabel("Время (ч):"));
+            paramsLayout->addWidget(new QLabel("Время (ч):"), 1, 0);
             QSpinBox *newTimeSpin = new QSpinBox();
             newTimeSpin->setRange(0, 48);
             newTimeSpin->setValue(edge.params.size() > 1 ? edge.params[1] : timeSpin->value());
-            timeLayout->addWidget(newTimeSpin);
+            paramsLayout->addWidget(newTimeSpin, 1, 1);
             
-            QHBoxLayout *visaLayout = new QHBoxLayout();
-            visaLayout->addWidget(new QLabel("Виза ($):"));
+            paramsLayout->addWidget(new QLabel("Виза ($):"), 2, 0);
             QSpinBox *newVisaSpin = new QSpinBox();
             newVisaSpin->setRange(0, 500);
             newVisaSpin->setValue(edge.params.size() > 2 ? edge.params[2] : visaSpin->value());
-            visaLayout->addWidget(newVisaSpin);
+            paramsLayout->addWidget(newVisaSpin, 2, 1);
             
             QHBoxLayout *buttonLayout = new QHBoxLayout();
             QPushButton *saveBtn = new QPushButton("Сохранить");
@@ -897,9 +954,7 @@ void MainWindow::editSelectedFlight()
             buttonLayout->addWidget(saveBtn);
             buttonLayout->addWidget(cancelBtn);
             
-            layout->addLayout(costLayout);
-            layout->addLayout(timeLayout);
-            layout->addLayout(visaLayout);
+            layout->addWidget(paramsGroup);
             layout->addLayout(buttonLayout);
             
             connect(saveBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
@@ -912,11 +967,13 @@ void MainWindow::editSelectedFlight()
                     newVisaSpin->value()
                 };
                 
+                std::vector<double> newWeights = edge.weights;
+                
                 if (graph->has_edge(fromCity, toCity)) {
                     graph->remove_edge(fromCity, toCity);
                 }
                 
-                graph->add_edge(fromCity, toCity, newParams);
+                graph->add_edge(fromCity, toCity, newParams, newWeights);
                 
                 drawGraph();
                 updateComboBoxes();
@@ -982,92 +1039,108 @@ void MainWindow::editCityPosition(const std::string& cityName)
     }
 }
 
-void MainWindow::updateEdgesForVertex(const std::string& vertexName)
+void MainWindow::updateEdgesForVertex(const std::string& vertex_name)
 {
-    auto outEdges = graph->get_to_vertices(vertexName);
-    for (const auto& toVertex : outEdges) {
-        std::string edgeName = vertexName + "_" + toVertex;
-        if (flightLines.find(edgeName) != flightLines.end()) {
-            scene->removeItem(flightLines[edgeName]);
-            delete flightLines[edgeName];
-            flightLines.erase(edgeName);
+    if (cityCircles.find(vertex_name) == cityCircles.end()) {
+        return;
+    }
+    
+    auto outEdges = graph->get_to_vertices(vertex_name);
+    
+    for (const auto& to_vertex_name : outEdges) {
+        std::string edge_key = vertex_name + "_" + to_vertex_name;
+        
+        if (flightLines.find(edge_key) != flightLines.end()) {
+            scene->removeItem(flightLines[edge_key]);
+            delete flightLines[edge_key];
+            flightLines.erase(edge_key);
             
-            if (flightArrows.find(edgeName) != flightArrows.end()) {
-                scene->removeItem(flightArrows[edgeName]);
-                delete flightArrows[edgeName];
-                flightArrows.erase(edgeName);
+            if (flightArrows.find(edge_key) != flightArrows.end()) {
+                scene->removeItem(flightArrows[edge_key]);
+                delete flightArrows[edge_key];
+                flightArrows.erase(edge_key);
             }
-            
+        }
+        
+        if (graph->has_edge(vertex_name, to_vertex_name)) {
             try {
-                Edge edge = graph->get_edge(vertexName, toVertex);
+                Edge edge = graph->get_edge(vertex_name, to_vertex_name);
                 drawFlightLine(edge);
             } catch (...) {
             }
         }
     }
     
-    auto inEdges = graph->get_from_vertices(vertexName);
-    for (const auto& fromVertex : inEdges) {
-        std::string edgeName = fromVertex + "_" + vertexName;
-        if (flightLines.find(edgeName) != flightLines.end()) {
-            scene->removeItem(flightLines[edgeName]);
-            delete flightLines[edgeName];
-            flightLines.erase(edgeName);
-            
-            if (flightArrows.find(edgeName) != flightArrows.end()) {
-                scene->removeItem(flightArrows[edgeName]);
-                delete flightArrows[edgeName];
-                flightArrows.erase(edgeName);
+    auto inEdges = graph->get_from_vertices(vertex_name);
+    for (const auto& from_vertex_name : inEdges) {
+        std::string edge_key = from_vertex_name + "_" + vertex_name;
+  
+        if (flightLines.find(edge_key) != flightLines.end()) {
+            scene->removeItem(flightLines[edge_key]);
+            delete flightLines[edge_key];
+            flightLines.erase(edge_key);
+
+            if (flightArrows.find(edge_key) != flightArrows.end()) {
+                scene->removeItem(flightArrows[edge_key]);
+                delete flightArrows[edge_key];
+                flightArrows.erase(edge_key);
             }
-            
+        }
+        
+        if (graph->has_edge(from_vertex_name, vertex_name)) {
             try {
-                Edge edge = graph->get_edge(fromVertex, vertexName);
+                Edge edge = graph->get_edge(from_vertex_name, vertex_name);
                 drawFlightLine(edge);
             } catch (...) {
-   
             }
         }
     }
 }
 
-void MainWindow::selectCity(const std::string& cityName)
+void MainWindow::selectCity(const std::string& city_name)
 {
     clearSelection();
-    selectedCity = cityName;
+    selectedCity = city_name;
     isCitySelected = true;
-    
-    if (cityCircles.find(cityName) != cityCircles.end()) {
-        cityCircles[cityName]->setBrush(QBrush(QColor(100, 255, 150)));
-        cityCircles[cityName]->setPen(QPen(Qt::darkRed, 2));
+
+    if (cityCircles.find(city_name) != cityCircles.end()) {
+        cityCircles[city_name]->setBrush(QBrush(QColor(100, 255, 150)));
+        cityCircles[city_name]->setPen(QPen(Qt::darkRed, 2));
     }
     
     updateSelectionInfo();
 }
 
-void MainWindow::selectFlight(const std::string& from, const std::string& to)
+void MainWindow::selectFlight(const std::string& from_name, const std::string& to_name)
 {
     clearSelection();
-    selectedFlight = {from, to};
+    selectedFlight = {from_name, to_name};
     isCitySelected = false;
+
+    std::string edge_key = from_name + "_" + to_name;
     
-    std::string flightKey = from + "_" + to;
-    if (flightLines.find(flightKey) != flightLines.end()) {
-        flightLines[flightKey]->setPen(QPen(QColor(255, 100, 100), 3));
+    if (flightLines.find(edge_key) != flightLines.end()) {
+        flightLines[edge_key]->setPen(QPen(QColor(255, 100, 100), 3));
     }
     
     updateSelectionInfo();
-    updateFlightInfo(from, to);
+    updateFlightInfo(from_name, to_name);
 }
 
 void MainWindow::clearSelection()
 {
-    for (auto& [cityName, circle] : cityCircles) {
+    for (auto& [city_name, circle] : cityCircles) {
         circle->setBrush(QBrush(QColor(100, 150, 255)));
         circle->setPen(QPen(Qt::darkBlue, 1));
     }
     
-    for (auto& [flightKey, line] : flightLines) {
+    for (auto& [edge_key, line] : flightLines) {
         line->setPen(QPen(QColor(80, 80, 80), 2));
+    }
+    
+    for (auto& [edge_key, arrow] : flightArrows) {
+        arrow->setBrush(QBrush(QColor(80, 80, 80)));
+        arrow->setPen(QPen(QColor(80, 80, 80)));
     }
     
     selectedCity = "";
@@ -1106,7 +1179,6 @@ void MainWindow::updateSelectionInfo()
             QString::fromStdString(selectedFlight.second));
         
     } else {
-        selectionTypeLabel->setText("Ничего не выделено");
         selectionNameLabel->setText("");
         flightParamsLabel->setText("Выберите город или перелет");
     }
@@ -1120,31 +1192,18 @@ void MainWindow::updateFlightInfo(const std::string& from, const std::string& to
         QString paramsText = "<div style='font-size: 9pt; line-height: 1.0; margin: 0; padding: 1px;'>";
         
         if (!edge.params.empty()) {
-            paramsText += "<b>Параметры:</b> ";
+            paramsText += "<b>Параметры:</b><br>";
             
-            if (edge.params.size() >= 1) {
-                paramsText += QString("Цена: $%1 ").arg(edge.params[0]);
-            }
-            if (edge.params.size() >= 2) {
-                paramsText += QString("| Время: %1 ч").arg(edge.params[1]);
-            }
-            if (edge.params.size() >= 3 && edge.params[2] > 0) {
-                paramsText += QString(" | Виза $%1").arg(edge.params[2]);
-            }
+            QStringList paramNames = {"Стоимость", "Время", "Виза"};
             
-            if (!edge.weights.empty()) {
-                bool hasWeights = false;
-                QString weightsStr;
-                for (size_t i = 0; i < edge.weights.size() && i < 3; ++i) {
-                    if (edge.weights[i] > 0.01) {
-                        if (hasWeights) weightsStr += " ";
-                        weightsStr += QString("%1").arg(edge.weights[i], 0, 'f', 1);
-                        hasWeights = true;
-                    }
-                }
-                if (hasWeights) {
-                    paramsText += QString("<br><b>Веса:</b> %1").arg(weightsStr);
-                }
+            for (size_t i = 0; i < edge.params.size() && i < 3; ++i) {
+                paramsText += QString("• %1: %2").arg(paramNames[i]).arg(edge.params[i]);
+                
+                if (i == 0) paramsText += " $";
+                else if (i == 1) paramsText += " ч";
+                else if (i == 2) paramsText += " $";
+                
+                paramsText += "<br>";
             }
         } else {
             paramsText += "Нет параметров";
@@ -1166,7 +1225,7 @@ std::string MainWindow::findCityAtPos(const QPointF& pos)
         double distance = sqrt(dx*dx + dy*dy);
         
         if (distance <= 20) {
-            return cityName;
+            return cityName; 
         }
     }
     return "";
@@ -1174,50 +1233,57 @@ std::string MainWindow::findCityAtPos(const QPointF& pos)
 
 std::pair<std::string, std::string> MainWindow::findFlightAtPos(const QPointF& pos)
 {
-    const auto& edges = graph->get_all_edges();
+    const auto& vertexNames = graph->get_all_vertex_names();
     double minDistance = 10;
     std::pair<std::string, std::string> closestFlight = {"", ""};
-    
-    for (const auto& edge : edges) {
-        auto fromIt = cityPositions.find(edge.second.start);
-        auto toIt = cityPositions.find(edge.second.finish);
-        
-        if (fromIt == cityPositions.end() || toIt == cityPositions.end()) {
-            continue;
-        }
-        
-        QPointF p1 = fromIt->second;
-        QPointF p2 = toIt->second;
-        
-        double A = pos.x() - p1.x();
-        double B = pos.y() - p1.y();
-        double C = p2.x() - p1.x();
-        double D = p2.y() - p1.y();
-        
-        double dot = A * C + B * D;
-        double len_sq = C * C + D * D;
-        double param = (len_sq != 0) ? dot / len_sq : -1;
-        
-        double xx, yy;
-        
-        if (param < 0) {
-            xx = p1.x();
-            yy = p1.y();
-        } else if (param > 1) {
-            xx = p2.x();
-            yy = p2.y();
-        } else {
-            xx = p1.x() + param * C;
-            yy = p1.y() + param * D;
-        }
-        
-        double dx = pos.x() - xx;
-        double dy = pos.y() - yy;
-        double distance = sqrt(dx*dx + dy*dy);
-        
-        if (distance < minDistance) {
-            minDistance = distance;
-            closestFlight = {edge.second.start, edge.second.finish};
+
+    for (const auto& fromName : vertexNames) {
+        auto neighbors = graph->get_to_vertices(fromName);
+        for (const auto& toName : neighbors) {
+            if (!graph->has_edge(fromName, toName)) {
+                continue;
+            }
+            
+            auto fromIt = cityPositions.find(fromName);
+            auto toIt = cityPositions.find(toName);
+            
+            if (fromIt == cityPositions.end() || toIt == cityPositions.end()) {
+                continue;
+            }
+            
+            QPointF p1 = fromIt->second;
+            QPointF p2 = toIt->second;
+            
+            double A = pos.x() - p1.x();
+            double B = pos.y() - p1.y();
+            double C = p2.x() - p1.x();
+            double D = p2.y() - p1.y();
+            
+            double dot = A * C + B * D;
+            double len_sq = C * C + D * D;
+            double param = (len_sq != 0) ? dot / len_sq : -1;
+            
+            double xx, yy;
+            
+            if (param < 0) {
+                xx = p1.x();
+                yy = p1.y();
+            } else if (param > 1) {
+                xx = p2.x();
+                yy = p2.y();
+            } else {
+                xx = p1.x() + param * C;
+                yy = p1.y() + param * D;
+            }
+            
+            double dx = pos.x() - xx;
+            double dy = pos.y() - yy;
+            double distance = sqrt(dx*dx + dy*dy);
+            
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestFlight = {fromName, toName};
+            }
         }
     }
     
@@ -1226,20 +1292,18 @@ std::pair<std::string, std::string> MainWindow::findFlightAtPos(const QPointF& p
 
 void MainWindow::handleSceneClick(const QPointF& pos)
 {
-    qDebug() << "Click at:" << pos;
-    
-    std::string city = findCityAtPos(pos);
-    if (!city.empty()) {
-        selectCity(city);
+    std::string city_name = findCityAtPos(pos);
+    if (!city_name.empty()) {
+        selectCity(city_name);
         return;
     }
-
+    
     auto flight = findFlightAtPos(pos);
     if (!flight.first.empty()) {
         selectFlight(flight.first, flight.second);
         return;
     }
-
+    
     clearSelection();
 }
 
@@ -1275,12 +1339,8 @@ void MainWindow::handleSceneRightClick(const QPointF& pos)
 
 void MainWindow::onColorSCC()
 {
-    qDebug() << "Coloring Strongly Connected Components...";
-    
     try {
-        std::vector<std::vector<std::string>> components = graph->find_scc();
-        
-        qDebug() << "Found" << components.size() << "SCC components";
+        std::vector<std::vector<std::string>> components = find_scc(*graph);
         
         if (components.empty()) {
             pathResultLabel->setText("Компоненты сильной связности");
@@ -1392,13 +1452,7 @@ void MainWindow::onColorSCC()
 
         sccDetailsText->verticalScrollBar()->setValue(0);
         
-        QTimer::singleShot(100, this, [this, components]() {
-            QString message = QString("Найдено %1 компонент(ы) сильной связности.\n")
-                                    .arg(components.size());
-        });
-        
     } catch (const std::exception& e) {
-        qDebug() << "Error finding SCC:" << e.what();
         QMessageBox::warning(this, "Ошибка", 
                            QString("Ошибка при поиске компонент связности: %1")
                            .arg(e.what()));
@@ -1429,63 +1483,74 @@ void MainWindow::loadMapToScene()
     
     QString mapPath;
     QStringList possiblePaths = {
-    "world_map.jpg",  
-    ":/images/world_map.jpg",  
-     QApplication::applicationDirPath() + "/world_map.jpg"
+        "world_map.jpg",
+        "world_map.png",
+        "map.jpg",
+        "data/world_map.jpg",
+        QApplication::applicationDirPath() + "/world_map.jpg"
     };
-
+    
+    bool fileLoaded = false;
+    QPixmap worldMap;
     
     for (const QString& path : possiblePaths) {
         if (QFile::exists(path)) {
             mapPath = path;
-            qDebug() << "Found map at:" << path;
-            break;
+            worldMap.load(path);
+            if (!worldMap.isNull()) {
+                fileLoaded = true;
+                break;
+            }
         }
     }
     
-    if (mapPath.isEmpty()) {
-        qDebug() << "Map not found at any location, using solid background";
-        QGraphicsRectItem *background = new QGraphicsRectItem(0, 0, 1200, 800);
-        background->setBrush(QBrush(QColor(200, 220, 240)));  
-        background->setZValue(-100);
-        background->setOpacity(0.7);
-        scene->addItem(background);
-        mapBackground = background;  
-        return;
-    }
-    
-    QPixmap worldMap(mapPath);
-    if (worldMap.isNull()) {
-        qDebug() << "Failed to load map pixmap from:" << mapPath;
- 
-        QGraphicsRectItem *background = new QGraphicsRectItem(0, 0, 1200, 800);
-        background->setBrush(QBrush(QColor(200, 220, 240)));  
-        background->setZValue(-100);
-        background->setOpacity(0.7);
-        scene->addItem(background);
-        mapBackground = background;  
-        return;
-    }
-    
-    QImage image = worldMap.toImage();
-    
-    for (int y = 0; y < image.height(); ++y) {
-        QRgb *scanLine = reinterpret_cast<QRgb*>(image.scanLine(y));
-        for (int x = 0; x < image.width(); ++x) {
-            QColor color = QColor::fromRgb(scanLine[x]);
-            color = color.darker(130); 
-            scanLine[x] = color.rgb();
-        }
-    }
-    
-    QPixmap adjustedMap = QPixmap::fromImage(image);
-    adjustedMap = adjustedMap.scaled(1200, 800, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
-    
-    QGraphicsPixmapItem *background = new QGraphicsPixmapItem(adjustedMap);
-    background->setZValue(-100); 
-    background->setOpacity(0.5);
-    scene->addItem(background);
-    mapBackground = background; 
-    
+    QPixmap backgroundPixmap;
 
+    QGraphicsPixmapItem *backgroundItem = new QGraphicsPixmapItem(backgroundPixmap);
+    if (!backgroundItem) {
+        return;
+    }
+    
+    backgroundItem->setZValue(-1000);
+    backgroundItem->setOpacity(0.7);   
+    
+    backgroundItem->setPos(0, 0);
+    
+    scene->addItem(backgroundItem);
+    mapBackground = backgroundItem;
+}
+
+std::string MainWindow::getNameById(const std::string& id) const 
+{
+    auto vertexNames = graph->get_all_vertex_names();
+    for (const auto& name : vertexNames) {
+        try {
+            if (graph->get_vertex(name).id == id) {
+                return name;
+            }
+        } catch (...) {
+            continue;
+        }
+    }
+    return "";
+}
+
+std::string MainWindow::getIdByName(const std::string& name) const 
+{
+    try {
+        return graph->get_vertex(name).id;
+    } catch (...) {
+        return "";
+    }
+}
+
+std::string MainWindow::getEdgeId(const std::string& fromName, const std::string& toName) const 
+{
+    try {
+        std::string fromId = getIdByName(fromName);
+        std::string toId = getIdByName(toName);
+        return fromId + "_" + toId;
+    } catch (...) {
+        return "";
+    }
 }

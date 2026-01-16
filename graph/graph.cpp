@@ -6,11 +6,13 @@
 #include <algorithm>  
 #include <tuple>    
 #include <stack>     
+#include <ctime>
 #include "graph.h"
 
-Graph::Graph() = default;
+Graph::Graph() : vertex_counter(0) {}
 
-Graph::Graph(const std::vector<std::string>& vert_names) {
+Graph::Graph(const std::vector<std::string>& vert_names) : vertex_counter(0) {
+    
     for (const auto& name : vert_names) {
         add_vertex(name);
     }
@@ -18,10 +20,43 @@ Graph::Graph(const std::vector<std::string>& vert_names) {
 
 Graph::~Graph() = default;
 
+std::string Graph::generate_vertex_id() {
+    std::string id;
+    do {
+        id = "v" + std::to_string(vertex_counter++);
+    } while (vertices.find(id) != vertices.end());
+    return id;
+}
 
-void Graph::add_edge(const std::string& from_name, const std::string& to_name,  const std::vector<int>& data,
-                     const std::vector<double>& weights) {
-    if(to_name == from_name){
+std::string Graph::get_vertex_id_by_name(const std::string& name) const {
+    auto it = name_to_id.find(name);
+    if (it != name_to_id.end()) {
+        return it->second;
+    }
+    throw Error::VERTEX_NOT_FOUND;
+}
+
+void Graph::add_vertex(const std::string& vertex_name, int x, int y) {
+    if (has_vertex(vertex_name)) {
+        errors_detection(Error::VERTEX_ALREADY_EXISTS);
+        throw Error::VERTEX_ALREADY_EXISTS;
+    }
+    
+    std::string vertex_id = generate_vertex_id();
+    
+    Vertex new_vertex(vertex_id, vertex_name);
+    if (x != -1 && y != -1) {
+        new_vertex.x = x;
+        new_vertex.y = y;
+    }
+    
+    vertices[vertex_id] = new_vertex;
+    name_to_id[vertex_name] = vertex_id;
+}
+
+void Graph::add_edge(const std::string& from_name, const std::string& to_name, 
+                     const std::vector<int>& data, const std::vector<double>& weights) {
+    if (to_name == from_name) {
         throw Error::EDGE_NOT_FOUND;
     }
     if (!has_vertex(from_name) || !has_vertex(to_name)) {
@@ -29,21 +64,23 @@ void Graph::add_edge(const std::string& from_name, const std::string& to_name,  
         throw Error::VERTEX_NOT_FOUND;
     }
     
-    std::string edge_name = from_name + "_" + to_name;
+    std::string from_id = get_vertex_id_by_name(from_name);
+    std::string to_id = get_vertex_id_by_name(to_name);
+    std::string edge_id = from_id + "_" + to_id;
     
     if (has_edge(from_name, to_name)) {
-        edges[edge_name].params = data;
+        edges[edge_id].params = data;
         if (!weights.empty()) {
-            edges[edge_name].weights = weights;
+            edges[edge_id].weights = weights;
         }
-        return; 
+        return;
     }
     
-    Edge new_edge(from_name, to_name, data, weights);
-    edges[new_edge.name] = new_edge;
+    Edge new_edge(from_id, to_id, data, weights);
+    edges[edge_id] = new_edge;
     
-    vertices[from_name].out_edges.push_back(new_edge.name);
-    vertices[to_name].in_edges.push_back(new_edge.name);
+    vertices[from_id].out_edges.push_back(edge_id);
+    vertices[to_id].in_edges.push_back(edge_id);
 }
 
 void Graph::remove_vertex(const std::string& vertex_name) {
@@ -51,34 +88,39 @@ void Graph::remove_vertex(const std::string& vertex_name) {
         throw Error::VERTEX_NOT_FOUND;
     }
     
+    std::string vertex_id = get_vertex_id_by_name(vertex_name);
+    const Vertex& vertex = vertices.at(vertex_id);
+    
     std::vector<std::string> edges_to_remove;
-
-    for (const auto& edge_name : vertices.at(vertex_name).out_edges) {
-        edges_to_remove.push_back(edge_name);
+    
+    for (const auto& edge_id : vertex.out_edges) {
+        edges_to_remove.push_back(edge_id);
     }
-
-    for (const auto& edge_name : vertices.at(vertex_name).in_edges) {
-        if (std::find(edges_to_remove.begin(), edges_to_remove.end(), edge_name) == edges_to_remove.end()) {
-            edges_to_remove.push_back(edge_name);
+    
+    for (const auto& edge_id : vertex.in_edges) {
+        if (std::find(edges_to_remove.begin(), edges_to_remove.end(), edge_id) == edges_to_remove.end()) {
+            edges_to_remove.push_back(edge_id);
         }
     }
-
-    for (const auto& edge_name : edges_to_remove) {
-        const Edge& e = edges.at(edge_name);
-        if (e.start != vertex_name) {
+    
+    for (const auto& edge_id : edges_to_remove) {
+        const Edge& e = edges.at(edge_id);
+        if (e.start != vertex_id && vertices.find(e.start) != vertices.end()) {
             auto& out_list = vertices.at(e.start).out_edges;
-            out_list.erase(std::remove(out_list.begin(), out_list.end(), edge_name), out_list.end());
+            out_list.erase(std::remove(out_list.begin(), out_list.end(), edge_id), out_list.end());
         }
-        if (e.finish != vertex_name) {
+        if (e.finish != vertex_id && vertices.find(e.finish) != vertices.end()) {
             auto& in_list = vertices.at(e.finish).in_edges;
-            in_list.erase(std::remove(in_list.begin(), in_list.end(), edge_name), in_list.end());
+            in_list.erase(std::remove(in_list.begin(), in_list.end(), edge_id), in_list.end());
         }
     }
-
-    for (const auto& edge_name : edges_to_remove) {
-        edges.erase(edge_name);
+    
+    for (const auto& edge_id : edges_to_remove) {
+        edges.erase(edge_id);
     }
-    vertices.erase(vertex_name);
+    
+    vertices.erase(vertex_id);
+    name_to_id.erase(vertex_name);
 }
 
 void Graph::remove_edge(const std::string& from_name, const std::string& to_name) {
@@ -87,39 +129,39 @@ void Graph::remove_edge(const std::string& from_name, const std::string& to_name
         throw Error::VERTEX_NOT_FOUND;
     }
     
-    std::string edge_name = from_name + "_" + to_name;
-    
     if (!has_edge(from_name, to_name)) {
         errors_detection(Error::EDGE_NOT_FOUND);
         throw Error::EDGE_NOT_FOUND;
     }
     
-    edges.erase(edge_name);
+    std::string from_id = get_vertex_id_by_name(from_name);
+    std::string to_id = get_vertex_id_by_name(to_name);
+    std::string edge_id = from_id + "_" + to_id;
+
+    auto& out_vector = vertices[from_id].out_edges;
+    out_vector.erase(std::remove(out_vector.begin(), out_vector.end(), edge_id), out_vector.end());
     
-    auto& out_vector = vertices[from_name].out_edges;
-    for (size_t i = 0; i < out_vector.size(); ++i) {
-        if (out_vector[i] == edge_name) {
-            out_vector.erase(out_vector.begin() + i);
-            break;
-        }
-    }
+    auto& in_vector = vertices[to_id].in_edges;
+    in_vector.erase(std::remove(in_vector.begin(), in_vector.end(), edge_id), in_vector.end());
+        edges.erase(edge_id);
     
-    auto& in_vector = vertices[to_name].in_edges;
-    for (size_t i = 0; i < in_vector.size(); ++i) {
-        if (in_vector[i] == edge_name) {
-            in_vector.erase(in_vector.begin() + i);
-            break;
-        }
-    }
+    edges.erase(edge_id);
 }
 
 bool Graph::has_vertex(const std::string& vertex_name) const {
-    return vertices.find(vertex_name) != vertices.end();
+    return name_to_id.find(vertex_name) != name_to_id.end();
 }
 
 bool Graph::has_edge(const std::string& from_name, const std::string& to_name) const {
-    std::string edge_name = from_name + "_" + to_name;
-    return edges.find(edge_name) != edges.end();
+    if (!has_vertex(from_name) || !has_vertex(to_name)) {
+        return false;
+    }
+
+    std::string from_id = get_vertex_id_by_name(from_name);
+    std::string to_id = get_vertex_id_by_name(to_name);
+    std::string edge_id = from_id + "_" + to_id;
+    return edges.find(edge_id) != edges.end();
+
 }
 
 Vertex& Graph::get_vertex(const std::string& vertex_name) const {
@@ -127,8 +169,8 @@ Vertex& Graph::get_vertex(const std::string& vertex_name) const {
         errors_detection(Error::VERTEX_NOT_FOUND);
         throw Error::VERTEX_NOT_FOUND;
     }
-    auto vert = vertices.find(vertex_name);
-    return const_cast<Vertex&>(vert->second);
+    std::string vertex_id = get_vertex_id_by_name(vertex_name);
+    return const_cast<Vertex&>(vertices.at(vertex_id));
 }
 
 Edge& Graph::get_edge(const std::string& from_name, const std::string& to_name) const {
@@ -136,14 +178,15 @@ Edge& Graph::get_edge(const std::string& from_name, const std::string& to_name) 
         errors_detection(Error::EDGE_NOT_FOUND);
         throw Error::EDGE_NOT_FOUND;
     }
-    std::string edge_name = from_name + "_" + to_name;
-    auto edge = edges.find(edge_name);
-    return const_cast<Edge&>(edge->second);
+    
+    std::string from_id = get_vertex_id_by_name(from_name);
+    std::string to_id = get_vertex_id_by_name(to_name);
+    std::string edge_id = from_id + "_" + to_id;
+    
+    return const_cast<Edge&>(edges.at(edge_id));
 }
 
-void Graph::change_vertex(const std::string& old_name, const std::string& new_name) {
-    if (old_name == new_name) return;
-    
+void Graph::rename_vertex(const std::string& old_name, const std::string& new_name) {
     if (!has_vertex(old_name)) {
         throw Error::VERTEX_NOT_FOUND;
     }
@@ -152,40 +195,30 @@ void Graph::change_vertex(const std::string& old_name, const std::string& new_na
         throw Error::VERTEX_ALREADY_EXISTS;
     }
     
-    add_vertex(new_name);
+    std::string vertex_id = get_vertex_id_by_name(old_name);
+    vertices[vertex_id].name = new_name;
     
-    std::vector<std::pair<std::string, std::string>> edges_to_copy;
-    std::vector<std::vector<int>> params_to_copy;
-    std::vector<std::vector<double>> weights_to_copy;
-    
-    for (const auto& edge_pair : edges) {
-        const Edge& edge = edge_pair.second;
-        
-        if (edge.start == old_name || edge.finish == old_name) {
-            std::string new_start = (edge.start == old_name) ? new_name : edge.start;
-            std::string new_finish = (edge.finish == old_name) ? new_name : edge.finish;
+    name_to_id.erase(old_name);
+    name_to_id[new_name] = vertex_id;
+}
 
-            if (new_start == new_finish) {
-                continue;
-            }
-            
-            edges_to_copy.push_back({new_start, new_finish});
-            params_to_copy.push_back(edge.params);
-            weights_to_copy.push_back(edge.weights);
-        }
+void Graph::set_vertex_position(const std::string& vertex_name, int x, int y) {
+    if (!has_vertex(vertex_name)) {
+        throw Error::VERTEX_NOT_FOUND;
     }
     
-    remove_vertex(old_name);
-    
-    for (size_t i = 0; i < edges_to_copy.size(); ++i) {
-        const auto& [from, to] = edges_to_copy[i];
-        
-        if (has_vertex(from) && has_vertex(to)) {
-            if (!has_edge(from, to)) {
-                add_edge(from, to, params_to_copy[i], weights_to_copy[i]);
-            }
-        }
+    std::string vertex_id = get_vertex_id_by_name(vertex_name);
+    vertices[vertex_id].x = x;
+    vertices[vertex_id].y = y;
+}
+
+std::pair<int, int> Graph::get_vertex_position(const std::string& vertex_name) const {
+    if (!has_vertex(vertex_name)) {
+        throw Error::VERTEX_NOT_FOUND;
     }
+    
+    std::string vertex_id = get_vertex_id_by_name(vertex_name);
+    return {vertices.at(vertex_id).x, vertices.at(vertex_id).y};
 }
 
 std::vector<std::string> Graph::get_to_vertices(const std::string& vertex_name) const {
@@ -195,18 +228,21 @@ std::vector<std::string> Graph::get_to_vertices(const std::string& vertex_name) 
         return result;
     }
     
-    const Vertex& vertex = vertices.at(vertex_name);
+    std::string vertex_id = get_vertex_id_by_name(vertex_name);
+    const Vertex& vertex = vertices.at(vertex_id);
     
-    for (const auto& edge_name : vertex.out_edges) {
-        auto edge = edges.find(edge_name);
+    for (const auto& edge_id : vertex.out_edges) {
+        auto edge = edges.find(edge_id);
         if (edge != edges.end()) {
-            result.push_back(edge->second.finish);
+            std::string to_id = edge->second.finish;
+            if (vertices.find(to_id) != vertices.end()) {
+                result.push_back(vertices.at(to_id).name);
+            }
         }
     }
     
     return result;
 }
-
 
 std::vector<std::string> Graph::get_from_vertices(const std::string& vertex_name) const {
     std::vector<std::string> result;
@@ -215,13 +251,16 @@ std::vector<std::string> Graph::get_from_vertices(const std::string& vertex_name
         return result;
     }
     
-    const Vertex& vertex = vertices.at(vertex_name);
+    std::string vertex_id = get_vertex_id_by_name(vertex_name);
+    const Vertex& vertex = vertices.at(vertex_id);
     
-    for (const auto& edge_name : vertex.in_edges) {
-        auto edge = edges.find(edge_name);
+    for (const auto& edge_id : vertex.in_edges) {
+        auto edge = edges.find(edge_id);
         if (edge != edges.end()) {
-
-            result.push_back(edge->second.start);
+            std::string from_id = edge->second.start;
+            if (vertices.find(from_id) != vertices.end()) {
+                result.push_back(vertices.at(from_id).name);
+            }
         }
     }
     
@@ -236,18 +275,11 @@ std::vector<std::string> Graph::get_neighbors(const std::string& vertex_name) co
     }
     
     auto to_vertices = get_to_vertices(vertex_name);
-    result = to_vertices;  
+    result = to_vertices;
     
     auto from_vertices = get_from_vertices(vertex_name);
     for (const auto& v : from_vertices) {
-        bool flag = false;
-        for (const auto& exist_path : result) {
-            if (exist_path == v) {
-                flag = true;
-                break;
-            }
-        }
-        if (!flag) {
+        if (std::find(result.begin(), result.end(), v) == result.end()) {
             result.push_back(v);
         }
     }
@@ -275,209 +307,83 @@ const std::unordered_map<std::string, Edge>& Graph::get_all_edges() const {
     return edges;
 }
 
+std::string Graph::get_vertex_name_by_id(const std::string& vertex_id) const {
+    auto it = vertices.find(vertex_id);
+    if (it != vertices.end()) {
+        return it->second.name;
+    }
+    return "";
+}
+
+std::vector<std::string> Graph::get_all_vertex_names() const {
+    std::vector<std::string> result;
+    result.reserve(name_to_id.size());
+    
+    for (const auto& [name, id] : name_to_id) {
+        result.push_back(name);
+    }
+    
+    return result;
+}
+
 void Graph::clear() {
     vertices.clear();
     edges.clear();
+    name_to_id.clear();
+    vertex_counter = 0;
 }
 
 void Graph::print() const {
     std::cout << "vertex count: " << vertex_count() << "\nedges count: " << edge_count() << "\n";
     
-    for (const auto& [name, edge] : edges) {
-        std::cout << edge.start << " _ " << edge.finish << " [ ";
-        for(int i = 0; i< edge.params.size(); i++){
+    for (const auto& [id, edge] : edges) {
+        std::cout << get_vertex_name_by_id(edge.start) << " -> " 
+                  << get_vertex_name_by_id(edge.finish) << " [ ";
+        for(int i = 0; i < edge.params.size(); i++) {
             std::cout << edge.params[i] << " ";
         }
         std::cout << "]\n";
     }
 }
 
-
-void Graph::generate_graph(int vert_count, int percent, int params_count){
-    for(int i = 0; i < vert_count; i++){
+void Graph::generate_graph(int vert_count, int percent, int params_count) {
+    for(int i = 0; i < vert_count; i++) {
         this->add_vertex(std::to_string(i));
     }
-
     this->generate_edges_for_graph(percent, params_count);
 }
 
-void Graph::add_vertex(const std::string& vertex_name, int x, int y) {
-    if (has_vertex(vertex_name)) {
-        errors_detection(Error::VERTEX_ALREADY_EXISTS);
-        throw Error::VERTEX_ALREADY_EXISTS;
-    }
-    
-    Vertex new_vertex(vertex_name);
-    if (x != -1 && y != -1) {
-        new_vertex.x = x;
-        new_vertex.y = y;
-    }
-    vertices[vertex_name] = new_vertex;
-}
-
-void Graph::set_vertex_position(const std::string& vertex_name, int x, int y) {
-    if (!has_vertex(vertex_name)) {
-        throw Error::VERTEX_NOT_FOUND;
-    }
-    vertices[vertex_name].x = x;
-    vertices[vertex_name].y = y;
-}
-
-std::pair<int, int> Graph::get_vertex_position(const std::string& vertex_name) const {
-    if (!has_vertex(vertex_name)) {
-        throw Error::VERTEX_NOT_FOUND;
-    }
-    return {vertices.at(vertex_name).x, vertices.at(vertex_name).y};
-}
-
-void Graph::generate_graph(std::vector<std::string> verts_name, int percent, int params_count){
-    for(auto vert_name: verts_name){
-        this->add_vertex(vert_name);
+void Graph::generate_graph(const std::vector<std::string>& verts_names, int percent, int params_count) {
+    for(const auto& name : verts_names) {
+        this->add_vertex(name);
     }
     this->generate_edges_for_graph(percent, params_count);
-
 }
 
-void Graph::generate_edges_for_graph(int percent, int params_count){
+void Graph::generate_edges_for_graph(int percent, int params_count) {
 
-    for(auto vert_1: vertices){
-    for(auto vert_2: vertices){
-        if(vert_1.first != vert_2.first){
-            if((rand()%100 + 1) <= percent){
-                std::vector<int> params;
-                std::vector<double> weights;
-
-                for(int i = 0; i <params_count; i++){
-                    params.push_back(rand() % 100);
-                    double weight = (rand()% 100) / 100;
-                    weights.push_back(weight);
-                }
-                this->add_edge(vert_1.first, vert_2.first, params);
-            }
-        }
-    }
-}
-}
-
-void Graph::relax_edges(const Path& curr_path, const std::vector<bool>& consider_params,
-                       std::unordered_map<std::string, double>& best_sums, std::priority_queue<std::pair<double, Path>, 
-                                          std::vector<std::pair<double, Path>>, std::greater<std::pair<double, Path>>>& pq) const {
+    std::vector<std::string> vertex_names = get_all_vertex_names();
     
-    std::string curr_vertex = curr_path.verts.back();
-    auto neighbors = get_to_vertices(curr_vertex);
-
-    for (const auto& neighbor : neighbors) {
-        Edge edge = get_edge(curr_vertex, neighbor);
-        
-        Path new_path = add_edge_to_path(curr_path, edge, consider_params);
-        
-        if (best_sums.find(neighbor) == best_sums.end() || 
-            new_path.weighted_sum < best_sums[neighbor]) {
-            best_sums[neighbor] = new_path.weighted_sum;
-            pq.push({new_path.weighted_sum, new_path});
-        }
-    }
-}
-
-Path Graph::dijkstra_alg(const std::string& start, const std::string& finish,
-                        const std::vector<bool>& consider_params) {
-    
-    if (!has_vertex(start) || !has_vertex(finish)) {
-        errors_detection(Error::VERTEX_NOT_FOUND);
-        throw Error::VERTEX_NOT_FOUND;
-    }
-    
-    std::priority_queue<std::pair<double, Path>, std::vector<std::pair<double, Path>>, std::greater<std::pair<double, Path>>> pq;
-    std::unordered_map<std::string, double> best_sums;
-    
-    Path start_path;
-    start_path.verts = {start};
-    start_path.cost = std::vector<int>(consider_params.size(), 0);
-    start_path.weighted_sum = 0.0;
-    
-    pq.push({0.0, start_path});
-    best_sums[start] = 0.0;
-    
-    while (!pq.empty()) {
-        auto [curr_sum, curr_path] = pq.top();
-        pq.pop();
-        
-        std::string curr_vertex = curr_path.verts.back();
-        
-        if (curr_vertex == finish) {
-            return curr_path;
-        }
-        
-        if (curr_sum > best_sums[curr_vertex]) {
-            continue;
-        }
-        
-        relax_edges(curr_path, consider_params, best_sums, pq);
-    }
-    return Path();
-}
-
-std::vector<std::vector<std::string>> Graph::find_scc() const {
-
-    std::vector<std::vector<std::string>> components;
-    std::unordered_map<std::string, bool> visited;
-    std::vector<std::string> order;
-
-    for (const auto& [name, vertex] : vertices) {
-        if (visited[name]) continue;
-
-        std::stack<std::string> stack;
-        stack.push(name);
-        visited[name] = true;
-
-        while (!stack.empty()) {
-            std::string v = stack.top();
-            bool pushed = false;
-
-            for (const auto& edge_name : vertices.at(v).out_edges) {
-                std::string u = edges.at(edge_name).finish;
-                if (!visited[u]) {
-                    visited[u] = true;
-                    stack.push(u);
-                    pushed = true;
-                    break;
-                }
-            }
-
-            if (!pushed) {
-                stack.pop();
-                order.push_back(v); 
-            }
-        }
-    }
-
-    std::unordered_map<std::string, bool> visited_rev;
-    std::reverse(order.begin(), order.end()); 
-
-    for (const std::string& v : order) {
-        if (visited_rev[v]) continue;
-
-        std::vector<std::string> comp;
-        std::stack<std::string> stack;
-        stack.push(v);
-        visited_rev[v] = true;
-
-        while (!stack.empty()) {
-            std::string node = stack.top();
-            stack.pop();
-            comp.push_back(node);
-
-            for (const auto& edge_name : vertices.at(node).in_edges) {
-                std::string u = edges.at(edge_name).start;  
-                if (!visited_rev[u]) {
-                    visited_rev[u] = true;
-                    stack.push(u);
+    for (const auto& vert_name1 : vertex_names) {
+        for (const auto& vert_name2 : vertex_names) {
+            if (vert_name1 != vert_name2) {
+                if ((std::rand() % 100 + 1) <= percent) {
+                    std::vector<int> params;
+                    std::vector<double> weights;
+                    
+                    for (int i = 0; i < params_count; i++) {
+                        params.push_back(std::rand() % 100);
+                        double weight = (std::rand() % 100) / 100.0;
+                        weights.push_back(weight);
+                    }
+                    
+                    try {
+                        this->add_edge(vert_name1, vert_name2, params, weights);
+                    } catch (const Error& e) {
+                        
+                    }
                 }
             }
         }
-
-        components.push_back(std::move(comp));
     }
-
-    return components;
 }
