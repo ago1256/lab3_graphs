@@ -353,15 +353,13 @@ void MainWindow::drawGraph()
     try {
            QList<QGraphicsItem*> items = scene->items();
         for (QGraphicsItem* item : items) {
-            // Удаляем только элементы графа (вершины, ребра, текст)
-            // Фон (mapBackground) оставляем
+
             if (item != mapBackground && item->zValue() >= -90) {
                 scene->removeItem(item);
                 delete item;
             }
         }
-        
-        // Очищаем контейнеры
+
         cityCircles.clear();
         cityPositions.clear();
         flightLines.clear();
@@ -387,12 +385,10 @@ void MainWindow::drawGraph()
             return;
         }
         
-        // Если карта еще не загружена, загружаем ее
         if (!mapBackground) {
             loadMapToScene();
         }
         
-        // Устанавливаем размер сцены
         int sceneWidth = 1200;
         int sceneHeight = 800;
         scene->setSceneRect(0, 0, sceneWidth, sceneHeight);
@@ -420,7 +416,7 @@ void MainWindow::drawGraph()
             }
             
             circle->setPos(x, y);
-            circle->setZValue(10);  // Убедимся, что вершины поверх карты
+            circle->setZValue(10); 
             scene->addItem(circle);
             
             cityCircles[vertex.first] = circle;
@@ -736,7 +732,6 @@ void MainWindow::onClearGraph()
     if (reply == QMessageBox::Yes) {
         graph->clear();
         
-        // Удаляем только элементы графа, не фон
         QList<QGraphicsItem*> items = scene->items();
         for (QGraphicsItem* item : items) {
             if (item != mapBackground && item->zValue() >= -90) {
@@ -753,7 +748,6 @@ void MainWindow::onClearGraph()
         updateComboBoxes();
         clearSelection();
         
-        // Обновляем текст
         if (pathResultLabel) {
             pathResultLabel->setText("Граф очищен");
         }
@@ -1413,7 +1407,6 @@ void MainWindow::onColorSCC()
 
 void MainWindow::onResetColors()
 {
-    // Перерисовываем граф (фон сохранится)
     drawGraph();
     
     pathResultLabel->setText("Цвета сброшены");
@@ -1435,9 +1428,9 @@ void MainWindow::loadMapToScene()
     }
     
     QString mapPath;
-QStringList possiblePaths = {
-    "world_map.jpg",  // В корне проекта
-    ":/images/world_map.jpg",  // Если используете ресурсы Qt
+    QStringList possiblePaths = {
+    "world_map.jpg",  
+    ":/images/world_map.jpg",  
      QApplication::applicationDirPath() + "/world_map.jpg"
     };
 
@@ -1452,52 +1445,47 @@ QStringList possiblePaths = {
     
     if (mapPath.isEmpty()) {
         qDebug() << "Map not found at any location, using solid background";
-        // Создаем простой фон
         QGraphicsRectItem *background = new QGraphicsRectItem(0, 0, 1200, 800);
         background->setBrush(QBrush(QColor(200, 220, 240)));  
         background->setZValue(-100);
         background->setOpacity(0.7);
         scene->addItem(background);
-        mapBackground = background;  // Теперь можно присвоить, так как mapBackground - QGraphicsItem*
+        mapBackground = background;  
         return;
     }
     
     QPixmap worldMap(mapPath);
     if (worldMap.isNull()) {
         qDebug() << "Failed to load map pixmap from:" << mapPath;
-        // Создаем простой фон
+ 
         QGraphicsRectItem *background = new QGraphicsRectItem(0, 0, 1200, 800);
         background->setBrush(QBrush(QColor(200, 220, 240)));  
         background->setZValue(-100);
         background->setOpacity(0.7);
         scene->addItem(background);
-        mapBackground = background;  // Теперь можно присвоить
+        mapBackground = background;  
         return;
     }
     
-    // Увеличим контраст и уменьшим яркость для лучшей видимости вершин
     QImage image = worldMap.toImage();
     
     for (int y = 0; y < image.height(); ++y) {
         QRgb *scanLine = reinterpret_cast<QRgb*>(image.scanLine(y));
         for (int x = 0; x < image.width(); ++x) {
             QColor color = QColor::fromRgb(scanLine[x]);
-            // Уменьшаем яркость и увеличиваем контраст
             color = color.darker(130); 
             scanLine[x] = color.rgb();
         }
     }
     
     QPixmap adjustedMap = QPixmap::fromImage(image);
-    // Масштабируем карту под размер сцены
     adjustedMap = adjustedMap.scaled(1200, 800, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
     
-    // Создаем фон
     QGraphicsPixmapItem *background = new QGraphicsPixmapItem(adjustedMap);
-    background->setZValue(-100);  // Очень низкий z-value, чтобы был фоном
-    background->setOpacity(0.5);  // Полупрозрачность для лучшей видимости вершин
+    background->setZValue(-100); 
+    background->setOpacity(0.5);
     scene->addItem(background);
-    mapBackground = background;  // Теперь можно присвоить
+    mapBackground = background; 
     
-    qDebug() << "Map loaded successfully with opacity 0.5";
+
 }
