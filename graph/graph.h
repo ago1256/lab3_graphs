@@ -20,7 +20,7 @@ private:
                     std::unordered_map<std::string, double>& best_sums, std::priority_queue<std::pair<double, Path>, 
                                        std::vector<std::pair<double, Path>>,  std::greater<std::pair<double, Path>>>& pq) const;
 
-    void generate_edges_for_graph(int percent, int params_count);
+
 
 public:
 
@@ -28,7 +28,6 @@ public:
     Graph(const std::vector<std::string>& vert_names);
     ~Graph();
     
-    void add_vertex(const std::string& vertex_name);
     void add_edge(const std::string& from_name, const std::string& to_name, const  std::vector<int>& data = {}, 
         const std::vector<double>& weights = {});
     void remove_vertex(const std::string& vertex_name);
@@ -41,6 +40,9 @@ public:
     Edge& get_edge(const std::string& from_name, const std::string& to_name) const;
 
     void change_vertex(const std::string& old_name, const std::string& new_name);
+    void add_vertex(const std::string& vertex_name, int x = -1, int y = -1);
+    void set_vertex_position(const std::string& vertex_name, int x, int y);
+    std::pair<int, int> get_vertex_position(const std::string& vertex_name) const;
     
     std::vector<std::string> get_to_vertices(const std::string& vertex_name) const;  
     std::vector<std::string> get_from_vertices(const std::string& vertex_name) const; 
@@ -54,9 +56,12 @@ public:
     
     void generate_graph(int vert_count, int percent, int params_count);
     void generate_graph(std::vector<std::string> verts_name, int percent, int params_count);
+    void generate_edges_for_graph(int percent, int params_count);
     void clear();
     void print() const;
 
     Path dijkstra_alg(const std::string& start, const std::string& finish, const std::vector<bool>& consider_params);
+
+    std::vector<std::vector<std::string>> find_scc() const;
 };
 

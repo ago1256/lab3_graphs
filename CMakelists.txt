@@ -7,22 +7,20 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-# Укажите правильный путь к Qt6
-# ЗАМЕНИТЕ этот путь на ваш реальный путь к Qt
-set(QT_DIR "C:/6.5.2/mingw_64")  # ИЗМЕНИТЕ ЭТУ СТРОКУ!
+set(QT_DIR "C:/6.5.2/mingw_64")  
 
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 
-# Файлы приложения
 set(APP_SOURCES
-    main.cpp
-    mainwindow.cpp
-    mainwindow.h
-    customscene.cpp
-    customscene.h
+    main.cpp  
+    ui/mainwindow.cpp     
+    ui/mainwindow.h       
+    ui/customscene.cpp    
+    ui/customscene.h      
+    ui/draggablevertex.cpp 
+    ui/draggablevertex.h  
 )
 
-# Файлы графа
 set(GRAPH_SOURCES
     graph/graph.cpp
     graph/graph.h
@@ -32,18 +30,17 @@ set(GRAPH_SOURCES
     errors/errors.h
 )
 
-# WIN32 для GUI приложения
 add_executable(GraphVisualizer WIN32
     ${APP_SOURCES}
     ${GRAPH_SOURCES}
 )
 
-# Добавляем include директории
 target_include_directories(GraphVisualizer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/graph
     ${CMAKE_CURRENT_SOURCE_DIR}/structs_for_graph
     ${CMAKE_CURRENT_SOURCE_DIR}/errors
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui    
 )
 
 target_link_libraries(GraphVisualizer PRIVATE
@@ -51,9 +48,7 @@ target_link_libraries(GraphVisualizer PRIVATE
     Qt6::Widgets
 )
 
-# Автоматически копируем нужные DLL
 if(WIN32)
-    # Функция для копирования Qt DLL
     function(copy_qt6_dll target)
         if(TARGET Qt6::Core)
             add_custom_command(TARGET ${target} POST_BUILD
@@ -73,7 +68,6 @@ if(WIN32)
             )
         endif()
         
-        # Копируем платформенные плагины
         if(EXISTS "${QT_DIR}/plugins/platforms/qwindows.dll")
             add_custom_command(TARGET ${target} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E make_directory
@@ -89,7 +83,6 @@ if(WIN32)
             )
         endif()
         
-        # Для MinGW копируем дополнительные DLL
         if(MINGW)
             add_custom_command(TARGET ${target} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -111,17 +104,14 @@ if(WIN32)
             )
         endif()
     endfunction()
-    
-    # Вызываем функцию для нашего приложения
+
     copy_qt6_dll(GraphVisualizer)
 endif()
 
-# Создаем папку для данных
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data)
 
 message(STATUS "Project configured successfully")
 
-# Копируем папку data с файлами городов
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/data")
     add_custom_command(TARGET GraphVisualizer POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory

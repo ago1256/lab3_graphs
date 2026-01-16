@@ -13,6 +13,7 @@ public:
     
 signals:
     void sceneClicked(const QPointF& pos);
+    void sceneRightClicked(const QPointF& pos);
     
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;

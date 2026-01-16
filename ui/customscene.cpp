@@ -7,9 +7,11 @@ CustomScene::CustomScene(QObject *parent)
 
 void CustomScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    // Передаем сигнал о клике
-    emit sceneClicked(event->scenePos());
+    if (event->button() == Qt::LeftButton) {
+        emit sceneClicked(event->scenePos());
+    } else if (event->button() == Qt::RightButton) {
+        emit sceneRightClicked(event->scenePos());
+    }
     
-    // Вызываем базовую реализацию
     QGraphicsScene::mousePressEvent(event);
 }

@@ -22,3 +22,5 @@ void test_dijkstra_both_params();
 void test_dijkstra_no_path();
 void test_dijkstra_complex_graph();
 void test_dijkstra_after_changes();
+void test_scc();
+void test_scc_complex();

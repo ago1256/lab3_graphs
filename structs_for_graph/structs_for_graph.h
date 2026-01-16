@@ -8,9 +8,13 @@ struct Vertex {
     std::vector<std::string> in_edges;    
     std::vector<std::string> out_edges;
     std::string name;    
+    int x = 0;    
+    int y = 0;        
     
     Vertex() = default;  
     Vertex(const std::string& vert_name) : name(vert_name) {}
+    Vertex(const std::string& vert_name, int pos_x, int pos_y) 
+        : name(vert_name), x(pos_x), y(pos_y) {}
 };
 
 struct Edge {

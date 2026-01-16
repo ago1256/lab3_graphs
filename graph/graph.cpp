@@ -3,8 +3,9 @@
 #include <string>
 #include <iostream>
 #include <random>
-#include <algorithm>  // для std::sort, std::unique
-#include <tuple>      // для std::tuple
+#include <algorithm>  
+#include <tuple>    
+#include <stack>     
 #include "graph.h"
 
 Graph::Graph() = default;
@@ -17,13 +18,6 @@ Graph::Graph(const std::vector<std::string>& vert_names) {
 
 Graph::~Graph() = default;
 
-void Graph::add_vertex(const std::string& vertex_name) {
-    if (has_vertex(vertex_name)) {
-        errors_detection(Error::VERTEX_ALREADY_EXISTS);
-        throw Error::VERTEX_ALREADY_EXISTS;
-    }
-    vertices[vertex_name] = Vertex(vertex_name);
-}
 
 void Graph::add_edge(const std::string& from_name, const std::string& to_name,  const std::vector<int>& data,
                      const std::vector<double>& weights) {
@@ -57,21 +51,18 @@ void Graph::remove_vertex(const std::string& vertex_name) {
         throw Error::VERTEX_NOT_FOUND;
     }
     
-    // Собираем имена рёбер, которые нужно удалить
     std::vector<std::string> edges_to_remove;
-    
-    // Все исходящие рёбра
+
     for (const auto& edge_name : vertices.at(vertex_name).out_edges) {
         edges_to_remove.push_back(edge_name);
     }
-    // Все входящие рёбра
+
     for (const auto& edge_name : vertices.at(vertex_name).in_edges) {
         if (std::find(edges_to_remove.begin(), edges_to_remove.end(), edge_name) == edges_to_remove.end()) {
             edges_to_remove.push_back(edge_name);
         }
     }
 
-    // Удаляем ссылки на эти рёбра из других вершин
     for (const auto& edge_name : edges_to_remove) {
         const Edge& e = edges.at(edge_name);
         if (e.start != vertex_name) {
@@ -84,7 +75,6 @@ void Graph::remove_vertex(const std::string& vertex_name) {
         }
     }
 
-    // Удаляем саму вершину и рёбра
     for (const auto& edge_name : edges_to_remove) {
         edges.erase(edge_name);
     }
@@ -104,10 +94,8 @@ void Graph::remove_edge(const std::string& from_name, const std::string& to_name
         throw Error::EDGE_NOT_FOUND;
     }
     
-    // Удаляем ребро из edges
     edges.erase(edge_name);
     
-    // Удаляем ссылку из out_edges исходной вершины
     auto& out_vector = vertices[from_name].out_edges;
     for (size_t i = 0; i < out_vector.size(); ++i) {
         if (out_vector[i] == edge_name) {
@@ -116,7 +104,6 @@ void Graph::remove_edge(const std::string& from_name, const std::string& to_name
         }
     }
     
-    // Удаляем ссылку из in_edges целевой вершины
     auto& in_vector = vertices[to_name].in_edges;
     for (size_t i = 0; i < in_vector.size(); ++i) {
         if (in_vector[i] == edge_name) {
@@ -165,26 +152,19 @@ void Graph::change_vertex(const std::string& old_name, const std::string& new_na
         throw Error::VERTEX_ALREADY_EXISTS;
     }
     
-    // 1. Создаём новую вершину
     add_vertex(new_name);
     
-    // 2. Копируем ВСЕ ребра, связанные со старой вершиной
-    // НЕ используем итераторы по edges, так как они могут измениться!
     std::vector<std::pair<std::string, std::string>> edges_to_copy;
     std::vector<std::vector<int>> params_to_copy;
     std::vector<std::vector<double>> weights_to_copy;
     
-    // Сначала собираем информацию обо ВСЕХ ребрах графа
     for (const auto& edge_pair : edges) {
         const Edge& edge = edge_pair.second;
         
-        // Если ребро связано со старой вершиной
         if (edge.start == old_name || edge.finish == old_name) {
-            // Определяем новые имена для начала и конца ребра
             std::string new_start = (edge.start == old_name) ? new_name : edge.start;
             std::string new_finish = (edge.finish == old_name) ? new_name : edge.finish;
-            
-            // Пропускаем петли
+
             if (new_start == new_finish) {
                 continue;
             }
@@ -195,16 +175,12 @@ void Graph::change_vertex(const std::string& old_name, const std::string& new_na
         }
     }
     
-    // 3. Удаляем старую вершину
     remove_vertex(old_name);
     
-    // 4. Добавляем новые ребра с обновлёнными именами
     for (size_t i = 0; i < edges_to_copy.size(); ++i) {
         const auto& [from, to] = edges_to_copy[i];
         
-        // Проверяем, что обе вершины существуют (новая вершина точно существует)
         if (has_vertex(from) && has_vertex(to)) {
-            // Проверяем, не существует ли уже такое ребро
             if (!has_edge(from, to)) {
                 add_edge(from, to, params_to_copy[i], weights_to_copy[i]);
             }
@@ -325,6 +301,35 @@ void Graph::generate_graph(int vert_count, int percent, int params_count){
     this->generate_edges_for_graph(percent, params_count);
 }
 
+void Graph::add_vertex(const std::string& vertex_name, int x, int y) {
+    if (has_vertex(vertex_name)) {
+        errors_detection(Error::VERTEX_ALREADY_EXISTS);
+        throw Error::VERTEX_ALREADY_EXISTS;
+    }
+    
+    Vertex new_vertex(vertex_name);
+    if (x != -1 && y != -1) {
+        new_vertex.x = x;
+        new_vertex.y = y;
+    }
+    vertices[vertex_name] = new_vertex;
+}
+
+void Graph::set_vertex_position(const std::string& vertex_name, int x, int y) {
+    if (!has_vertex(vertex_name)) {
+        throw Error::VERTEX_NOT_FOUND;
+    }
+    vertices[vertex_name].x = x;
+    vertices[vertex_name].y = y;
+}
+
+std::pair<int, int> Graph::get_vertex_position(const std::string& vertex_name) const {
+    if (!has_vertex(vertex_name)) {
+        throw Error::VERTEX_NOT_FOUND;
+    }
+    return {vertices.at(vertex_name).x, vertices.at(vertex_name).y};
+}
+
 void Graph::generate_graph(std::vector<std::string> verts_name, int percent, int params_count){
     for(auto vert_name: verts_name){
         this->add_vertex(vert_name);
@@ -410,4 +415,69 @@ Path Graph::dijkstra_alg(const std::string& start, const std::string& finish,
         relax_edges(curr_path, consider_params, best_sums, pq);
     }
     return Path();
+}
+
+std::vector<std::vector<std::string>> Graph::find_scc() const {
+
+    std::vector<std::vector<std::string>> components;
+    std::unordered_map<std::string, bool> visited;
+    std::vector<std::string> order;
+
+    for (const auto& [name, vertex] : vertices) {
+        if (visited[name]) continue;
+
+        std::stack<std::string> stack;
+        stack.push(name);
+        visited[name] = true;
+
+        while (!stack.empty()) {
+            std::string v = stack.top();
+            bool pushed = false;
+
+            for (const auto& edge_name : vertices.at(v).out_edges) {
+                std::string u = edges.at(edge_name).finish;
+                if (!visited[u]) {
+                    visited[u] = true;
+                    stack.push(u);
+                    pushed = true;
+                    break;
+                }
+            }
+
+            if (!pushed) {
+                stack.pop();
+                order.push_back(v); 
+            }
+        }
+    }
+
+    std::unordered_map<std::string, bool> visited_rev;
+    std::reverse(order.begin(), order.end()); 
+
+    for (const std::string& v : order) {
+        if (visited_rev[v]) continue;
+
+        std::vector<std::string> comp;
+        std::stack<std::string> stack;
+        stack.push(v);
+        visited_rev[v] = true;
+
+        while (!stack.empty()) {
+            std::string node = stack.top();
+            stack.pop();
+            comp.push_back(node);
+
+            for (const auto& edge_name : vertices.at(node).in_edges) {
+                std::string u = edges.at(edge_name).start;  
+                if (!visited_rev[u]) {
+                    visited_rev[u] = true;
+                    stack.push(u);
+                }
+            }
+        }
+
+        components.push_back(std::move(comp));
+    }
+
+    return components;
 }

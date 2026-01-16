@@ -426,7 +426,6 @@ void test_dijkstra_after_changes() {
     std::vector<bool> first_param_only = {true, false};
     Path path1 = g.dijkstra_alg("A", "C", first_param_only);
     
-    std::cout << "\nBefore changes: ";
     print_path(path1);
     
     assert(!path1.verts.empty());
@@ -435,7 +434,6 @@ void test_dijkstra_after_changes() {
     g.remove_edge("A", "B");
     g.add_edge("A", "C", {3, 5});
     
-    std::cout << "After changes: ";
     g.print();
     
     Path path2 = g.dijkstra_alg("A", "C", first_param_only);
@@ -512,6 +510,67 @@ void test_generate_graph_2(){
     std::cout << "pass\n";
 }
 
+void test_scc(){
+    std::cout << "Test  scc: ";
+    Graph g({"A", "B", "C", "D"});
+    g.add_edge("A", "B");
+    g.add_edge("B", "C");
+    g.add_edge("C", "A");
+    g.add_edge("B", "D");
+
+    auto sccs = g.find_scc();
+
+    for (size_t i = 0; i < sccs.size(); ++i) {
+        std::cout << "{ ";
+        for (const auto& v : sccs[i]) {
+            std::cout << v << " ";
+        }
+        std::cout << "} ";
+        std::cout << "\n";
+    }
+    assert(sccs.size() == 2);
+    for(auto& scc: sccs){
+        if(scc.size() == 1){
+            assert(scc[0] == "D");
+        }
+    }
+    std::cout << "pass \n";
+
+}
+
+void test_scc_complex() {
+    std::cout << "Test SCC complex: ";
+
+    Graph g({"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"});
+
+    g.add_edge("A", "B", {}, {});
+    g.add_edge("B", "A", {}, {});
+    g.add_edge("B", "C", {}, {});
+    g.add_edge("C", "B", {}, {});
+
+    g.add_edge("D", "E", {}, {});
+    g.add_edge("E", "D", {}, {});
+
+    g.add_edge("G", "H", {}, {});
+
+    g.add_edge("I", "A", {}, {});
+    g.add_edge("C", "J", {}, {});
+
+    auto sccs = g.find_scc();
+
+    std::vector<std::vector<std::string>> expected = {{"A", "B", "C"}, {"D", "E"}, {"F"}, {"G"}, {"H"}, {"I"}, {"J"}};
+
+    for (size_t i = 0; i < sccs.size(); ++i) {
+        std::cout << "{ ";
+        for (const auto& v : sccs[i]) {
+            std::cout << v << " ";
+        }
+        std::cout << "} ";
+        std::cout << "\n";
+    }
+
+    std::cout << "pass (" << sccs.size() << " components)" << std::endl;
+}
 
 void run_dijkstra_tests() {
     std::cout << "\n=== Dijkstra Algorithm Tests ===\n\n";
@@ -542,6 +601,8 @@ void run_all_tests() {
     test_remove_all_vertices();
     test_generate_graph_1();
     test_generate_graph_2();
+    test_scc();
+    test_scc_complex();
     
     std::cout << "\nAll tests passed\n";
 }
