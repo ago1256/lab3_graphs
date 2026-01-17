@@ -294,7 +294,7 @@ void test_dijkstra_one_param() {
     g.add_edge("D", "C", {2, 12});  
     
     std::vector<bool> first_param_only = {true, false};
-    Path path1 = dijkstra_alg(g, "A", "C", first_param_only);
+    Path path1 = dijkstra_alg(g, "A", "C", first_param_only, {1, 1, 1});
     
     g.print();
     print_path(path1);
@@ -308,7 +308,7 @@ void test_dijkstra_one_param() {
     assert(path1.weighted_sum == 8.0);
     
     std::vector<bool> second_param_only = {false, true};
-    Path path2 = dijkstra_alg(g, "A", "C", second_param_only);
+    Path path2 = dijkstra_alg(g, "A", "C", second_param_only,  {1, 1, 1});
     
     std::cout << "Path considering only second parameter: ";
     print_path(path2);
@@ -336,7 +336,7 @@ void test_dijkstra_both_params() {
     g.add_edge("D", "C", {2, 12});
     
     std::vector<bool> both_params = {true, true};
-    Path best_path = dijkstra_alg(g, "A", "C", both_params);
+    Path best_path = dijkstra_alg(g, "A", "C", both_params, {1, 1, 1});
     
     std::cout << "\nBest path considering both parameters: ";
     print_path(best_path);
@@ -360,12 +360,12 @@ void test_dijkstra_with_weights() {
     g.add_vertex("B");
     g.add_vertex("C");
     
-    g.add_edge("A", "B", {10, 100}, {0.7, 0.3});
-    g.add_edge("A", "C", {15, 80}, {0.7, 0.3});   
-    g.add_edge("B", "C", {20, 50}, {0.7, 0.3}); 
+    g.add_edge("A", "B", {10, 100});
+    g.add_edge("A", "C", {15, 80});   
+    g.add_edge("B", "C", {20, 50}); 
     
     std::vector<bool> both_params = {true, true};
-    Path path = dijkstra_alg(g, "A", "C", both_params);
+    Path path = dijkstra_alg(g, "A", "C", both_params, {0.7, 0.3});
     
     print_path(path);
     
@@ -390,7 +390,7 @@ void test_dijkstra_no_path() {
     g.add_edge("A", "B", {5, 10});
     
     std::vector<bool> params = {true, true};
-    Path path = dijkstra_alg(g, "A", "C", params);
+    Path path = dijkstra_alg(g, "A", "C", params,  {1, 1, 1});
     
     assert(path.verts.empty()); 
     std::cout << "pass\n";
@@ -415,7 +415,7 @@ void test_dijkstra_after_changes() {
     g.add_edge("C", "E", {5, 5});
     
     std::vector<bool> first_param_only = {true, false};
-    Path path1 = dijkstra_alg(g, "A", "C", first_param_only);
+    Path path1 = dijkstra_alg(g, "A", "C", first_param_only,  {1, 1, 1});
     
     print_path(path1);
     
@@ -427,7 +427,7 @@ void test_dijkstra_after_changes() {
     
     g.print();
     
-    Path path2 = dijkstra_alg(g, "A", "C", first_param_only);
+    Path path2 = dijkstra_alg(g, "A", "C", first_param_only, {1, 1, 1});
     print_path(path2);
     
     assert(!path2.verts.empty());
@@ -459,7 +459,7 @@ void test_dijkstra_complex_graph() {
     g.add_edge("C", "E", {5, 5});
     
     std::vector<bool> params = {true, true};
-    Path path = dijkstra_alg(g, "A", "E", params);
+    Path path = dijkstra_alg(g, "A", "E", params,  {1, 1, 1});
     
     std::cout << "\nComplex graph: ";
     print_path(path);

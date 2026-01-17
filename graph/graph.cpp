@@ -1,5 +1,6 @@
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <string>
 #include <iostream>
 #include <random>
@@ -23,7 +24,7 @@ Graph::~Graph() = default;
 std::string Graph::generate_vertex_id() {
     std::string id;
     do {
-        id = "v" + std::to_string(vertex_counter++);
+        id = std::to_string(vertex_counter++);
     } while (vertices.find(id) != vertices.end());
     return id;
 }
@@ -54,8 +55,7 @@ void Graph::add_vertex(const std::string& vertex_name, int x, int y) {
     name_to_id[vertex_name] = vertex_id;
 }
 
-void Graph::add_edge(const std::string& from_name, const std::string& to_name, 
-                     const std::vector<int>& data, const std::vector<double>& weights) {
+void Graph::add_edge(const std::string& from_name, const std::string& to_name, const std::vector<int>& data) {
     if (to_name == from_name) {
         throw Error::EDGE_NOT_FOUND;
     }
@@ -70,18 +70,16 @@ void Graph::add_edge(const std::string& from_name, const std::string& to_name,
     
     if (has_edge(from_name, to_name)) {
         edges[edge_id].params = data;
-        if (!weights.empty()) {
-            edges[edge_id].weights = weights;
-        }
         return;
     }
     
-    Edge new_edge(from_id, to_id, data, weights);
+    Edge new_edge(from_id, to_id, data);
     edges[edge_id] = new_edge;
     
     vertices[from_id].out_edges.push_back(edge_id);
     vertices[to_id].in_edges.push_back(edge_id);
 }
+
 
 void Graph::remove_vertex(const std::string& vertex_name) {
     if (!has_vertex(vertex_name)) {
@@ -91,17 +89,9 @@ void Graph::remove_vertex(const std::string& vertex_name) {
     std::string vertex_id = get_vertex_id_by_name(vertex_name);
     const Vertex& vertex = vertices.at(vertex_id);
     
-    std::vector<std::string> edges_to_remove;
-    
-    for (const auto& edge_id : vertex.out_edges) {
-        edges_to_remove.push_back(edge_id);
-    }
-    
-    for (const auto& edge_id : vertex.in_edges) {
-        if (std::find(edges_to_remove.begin(), edges_to_remove.end(), edge_id) == edges_to_remove.end()) {
-            edges_to_remove.push_back(edge_id);
-        }
-    }
+    std::unordered_set<std::string> edges_to_remove;
+    edges_to_remove.insert(vertex.out_edges.begin(), vertex.out_edges.end());
+    edges_to_remove.insert(vertex.in_edges.begin(), vertex.in_edges.end());
     
     for (const auto& edge_id : edges_to_remove) {
         const Edge& e = edges.at(edge_id);
@@ -113,12 +103,9 @@ void Graph::remove_vertex(const std::string& vertex_name) {
             auto& in_list = vertices.at(e.finish).in_edges;
             in_list.erase(std::remove(in_list.begin(), in_list.end(), edge_id), in_list.end());
         }
-    }
-    
-    for (const auto& edge_id : edges_to_remove) {
         edges.erase(edge_id);
     }
-    
+
     vertices.erase(vertex_id);
     name_to_id.erase(vertex_name);
 }
@@ -143,9 +130,8 @@ void Graph::remove_edge(const std::string& from_name, const std::string& to_name
     
     auto& in_vector = vertices[to_id].in_edges;
     in_vector.erase(std::remove(in_vector.begin(), in_vector.end(), edge_id), in_vector.end());
-        edges.erase(edge_id);
-    
     edges.erase(edge_id);
+    
 }
 
 bool Graph::has_vertex(const std::string& vertex_name) const {
@@ -268,23 +254,25 @@ std::vector<std::string> Graph::get_from_vertices(const std::string& vertex_name
 }
 
 std::vector<std::string> Graph::get_neighbors(const std::string& vertex_name) const {
-    std::vector<std::string> result;
-    
+
     if (!has_vertex(vertex_name)) {
-        return result;
+        return {};
     }
     
-    auto to_vertices = get_to_vertices(vertex_name);
-    result = to_vertices;
+    std::string vertex_id = get_vertex_id_by_name(vertex_name);
+    std::unordered_set<std::string> neighbours;
     
-    auto from_vertices = get_from_vertices(vertex_name);
-    for (const auto& v : from_vertices) {
-        if (std::find(result.begin(), result.end(), v) == result.end()) {
-            result.push_back(v);
-        }
+    for (const auto& edge_id : vertices.at(vertex_id).out_edges) {
+        const auto& edge = edges.at(edge_id);
+        neighbours.insert(vertices.at(edge.finish).name);
     }
     
-    return result;
+    for (const auto& edge_id : vertices.at(vertex_id).in_edges) {
+        const auto& edge = edges.at(edge_id);
+        neighbours.insert(vertices.at(edge.start).name);
+    }
+    
+    return {neighbours.begin(), neighbours.end()};
 }
 
 size_t Graph::vertex_count() const {
@@ -361,7 +349,6 @@ void Graph::generate_graph(const std::vector<std::string>& verts_names, int perc
 }
 
 void Graph::generate_edges_for_graph(int percent, int params_count) {
-
     std::vector<std::string> vertex_names = get_all_vertex_names();
     
     for (const auto& vert_name1 : vertex_names) {
@@ -369,18 +356,15 @@ void Graph::generate_edges_for_graph(int percent, int params_count) {
             if (vert_name1 != vert_name2) {
                 if ((std::rand() % 100 + 1) <= percent) {
                     std::vector<int> params;
-                    std::vector<double> weights;
                     
                     for (int i = 0; i < params_count; i++) {
                         params.push_back(std::rand() % 100);
-                        double weight = (std::rand() % 100) / 100.0;
-                        weights.push_back(weight);
                     }
                     
                     try {
-                        this->add_edge(vert_name1, vert_name2, params, weights);
+                        this->add_edge(vert_name1, vert_name2, params);
                     } catch (const Error& e) {
-                        
+
                     }
                 }
             }

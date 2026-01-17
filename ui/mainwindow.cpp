@@ -25,8 +25,10 @@
 #include <QSplitter>
 #include <QScrollArea>
 #include <QTextEdit>
+#include <QPainter>
 #include <ctime>
 #include <algorithm>
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), 
@@ -659,10 +661,8 @@ void MainWindow::onAddFlight()
         visaSpin->value()
     };
     
-    std::vector<double> weights; 
-    
     try {
-        graph->add_edge(from_name.toStdString(), to_name.toStdString(), params, weights);
+        graph->add_edge(from_name.toStdString(), to_name.toStdString(), params);
         drawGraph();
         updateComboBoxes();
         selectFlight(from_name.toStdString(), to_name.toStdString());
@@ -699,80 +699,125 @@ void MainWindow::onFindPath()
     };
     
     try {
-        Path path = dijkstra_alg(*graph, from.toStdString(), to.toStdString(), consider_params);
+        std::vector<Path> all_paths = dijkstra_all_optimal_paths(*graph, from.toStdString(), to.toStdString(), consider_params, weights);
         
-        if (path.verts.empty()) {
+        if (all_paths.empty() || all_paths[0].verts.empty()) {
             pathResultLabel->setText("Путь не найден");
             sccDetailsText->setHtml(
                 "<div style='color: #666; padding: 15px; text-align: center;'>"
                 "Путь между городами не найден"
                 "</div>"
             );
+            return;
+        }
+        
+        QVector<QColor> pathColors = {
+            QColor(255, 100, 100),   
+            QColor(100, 255, 100),  
+            QColor(100, 100, 255), 
+            QColor(255, 255, 100),  
+            QColor(255, 100, 255),   
+            QColor(100, 255, 255),   
+            QColor(255, 180, 100),  
+            QColor(180, 100, 255)     
+        };
+        
+        clearSelection();
+        
+        QString htmlDetails = "<div style='padding: 8px; color: #2c3e50; font-size: 10pt; line-height: 1.4;'>";
+        
+        if (all_paths.size() == 1) {
+            htmlDetails += "<b>Найден 1 оптимальный путь:</b><br><br>";
         } else {
+            htmlDetails += QString("<b>Найдено %1 оптимальных путей (одинаковая стоимость):</b><br><br>")
+                          .arg(all_paths.size());
+        }
+        
+        for (size_t i = 0; i < all_paths.size(); ++i) {
+            const Path& path = all_paths[i];
+            QColor pathColor = pathColors[i % pathColors.size()];
+            
+            htmlDetails += QString("<div style='margin-bottom: 15px; padding: 10px; "
+                                  "border-left: 4px solid %1; background-color: %2;'>")
+                          .arg(pathColor.darker(130).name())
+                          .arg(pathColor.lighter(150).name());
+            
+            htmlDetails += QString("<b style='color: %1;'>Путь %2:</b><br>")
+                          .arg(pathColor.darker(150).name())
+                          .arg(i + 1);
+            
             QString pathStr;
-            for (size_t i = 0; i < path.verts.size(); ++i) {
-                pathStr += QString::fromStdString(path.verts[i]);
-                if (i < path.verts.size() - 1) pathStr += " → ";
+            for (size_t j = 0; j < path.verts.size(); ++j) {
+                pathStr += QString::fromStdString(path.verts[j]);
+                if (j < path.verts.size() - 1) pathStr += " → ";
             }
             
-            pathResultLabel->setText("Путь найден:");
-            
-            double weighted_sum = 0.0;
-            for (size_t i = 0; i < path.cost.size() && i < weights.size(); ++i) {
-                if (consider_params[i]) {
-                    weighted_sum += path.cost[i] * weights[i];
-                }
-            }
-            
-            QString htmlDetails = "<div style='padding: 8px; color: #2c3e50; font-size: 10pt; line-height: 1.4;'>";
-            htmlDetails += "<b>Маршрут:</b><br>";
             htmlDetails += pathStr + "<br><br>";
+            
             htmlDetails += "<b>Параметры:</b><br>";
             
             htmlDetails += QString("• Стоимость: $%1").arg(path.cost[0]);
             if (checkCost->isChecked()) {
                 htmlDetails += QString(" (вес: %1 = %2)").arg(weights[0], 0, 'f', 1)
-                                                 .arg(path.cost[0] * weights[0], 0, 'f', 2);
+                                                     .arg(path.cost[0] * weights[0], 0, 'f', 2);
             }
             htmlDetails += "<br>";
             
             htmlDetails += QString("• Время: %1 ч").arg(path.cost[1]);
             if (checkTime->isChecked()) {
                 htmlDetails += QString(" (вес: %1 = %2)").arg(weights[1], 0, 'f', 1)
-                                                 .arg(path.cost[1] * weights[1], 0, 'f', 2);
+                                                     .arg(path.cost[1] * weights[1], 0, 'f', 2);
             }
             htmlDetails += "<br>";
             
             htmlDetails += QString("• Виза: $%1").arg(path.cost[2]);
             if (checkVisa->isChecked()) {
                 htmlDetails += QString(" (вес: %1 = %2)").arg(weights[2], 0, 'f', 1)
-                                                 .arg(path.cost[2] * weights[2], 0, 'f', 2);
+                                                     .arg(path.cost[2] * weights[2], 0, 'f', 2);
             }
-            htmlDetails += "<br><br>";
             
-            htmlDetails += QString("<b>Взвешенная сумма: %1</b>").arg(weighted_sum, 0, 'f', 2);
+            double weighted_sum = 0.0;
+            for (size_t k = 0; k < path.cost.size() && k < weights.size(); ++k) {
+                if (consider_params[k]) {
+                    weighted_sum += path.cost[k] * weights[k];
+                }
+            }
             
+            htmlDetails += QString("<br><b>Взвешенная сумма: %1</b>").arg(weighted_sum, 0, 'f', 2);
             htmlDetails += "</div>";
-            sccDetailsText->setHtml(htmlDetails);
             
-            clearSelection();
-            for (size_t i = 0; i < path.verts.size() - 1; i++) {
-                std::string fromCity = path.verts[i];
-                std::string toCity = path.verts[i + 1];
+            for (size_t j = 0; j < path.verts.size() - 1; j++) {
+                std::string fromCity = path.verts[j];
+                std::string toCity = path.verts[j + 1];
                 
                 if (cityCircles.find(fromCity) != cityCircles.end()) {
-                    cityCircles[fromCity]->setBrush(QBrush(QColor(255, 200, 100)));
-                }
-                if (cityCircles.find(toCity) != cityCircles.end()) {
-                    cityCircles[toCity]->setBrush(QBrush(QColor(255, 200, 100)));
+                    cityCircles[fromCity]->setBrush(QBrush(pathColor.lighter(120)));
+                    cityCircles[fromCity]->setPen(QPen(pathColor.darker(150), 2));
                 }
                 
                 std::string flightKey = fromCity + "_" + toCity;
                 if (flightLines.find(flightKey) != flightLines.end()) {
-                    flightLines[flightKey]->setPen(QPen(QColor(255, 100, 100), 3));
+                    flightLines[flightKey]->setPen(QPen(pathColor, 3));
+                    flightLines[flightKey]->setZValue(10 + i); 
                 }
             }
         }
+        
+        for (size_t i = 0; i < all_paths.size(); ++i) {
+            const Path& path = all_paths[i];
+            if (!path.verts.empty()) {
+                std::string lastCity = path.verts.back();
+                if (cityCircles.find(lastCity) != cityCircles.end()) {
+                    cityCircles[lastCity]->setBrush(QBrush(pathColors[i % pathColors.size()].lighter(120)));
+                    cityCircles[lastCity]->setPen(QPen(pathColors[i % pathColors.size()].darker(150), 2));
+                }
+            }
+        }
+        
+        htmlDetails += "</div>";
+        
+        pathResultLabel->setText(QString("Найдено путей: %1").arg(all_paths.size()));
+        sccDetailsText->setHtml(htmlDetails);
         
     } catch (const std::exception& e) {
         QMessageBox::warning(this, "Ошибка", QString("Ошибка: %1").arg(e.what()));
@@ -967,13 +1012,12 @@ void MainWindow::editSelectedFlight()
                     newVisaSpin->value()
                 };
                 
-                std::vector<double> newWeights = edge.weights;
                 
                 if (graph->has_edge(fromCity, toCity)) {
                     graph->remove_edge(fromCity, toCity);
                 }
                 
-                graph->add_edge(fromCity, toCity, newParams, newWeights);
+                graph->add_edge(fromCity, toCity, newParams);
                 
                 drawGraph();
                 updateComboBoxes();
@@ -1476,46 +1520,372 @@ void MainWindow::onResetColors()
 void MainWindow::loadMapToScene()
 {
     if (!scene) return;
+    if (mapBackground) return;
     
-    if (mapBackground) {
-        return;
-    }
+    int sceneWidth = 1200;
+    int sceneHeight = 800;
     
-    QString mapPath;
-    QStringList possiblePaths = {
-        "world_map.jpg",
-        "world_map.png",
-        "map.jpg",
-        "data/world_map.jpg",
-        QApplication::applicationDirPath() + "/world_map.jpg"
+    QPixmap backgroundPixmap(sceneWidth, sceneHeight);
+    backgroundPixmap.fill(Qt::transparent);
+    
+    QPainter painter(&backgroundPixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    
+    QLinearGradient oceanGradient(0, 0, 0, sceneHeight);
+    oceanGradient.setColorAt(0.0, QColor(225, 245, 255));
+    oceanGradient.setColorAt(0.5, QColor(173, 216, 230));
+    oceanGradient.setColorAt(1.0, QColor(135, 206, 235));
+    painter.fillRect(0, 0, sceneWidth, sceneHeight, oceanGradient);
+    
+    auto lonToX = [sceneWidth](double lon) -> double {
+        return ((lon + 180.0) / 360.0) * sceneWidth;
     };
     
-    bool fileLoaded = false;
-    QPixmap worldMap;
+    auto latToYSimple = [sceneHeight](double lat) -> double {
+        return ((90.0 - lat) / 180.0) * sceneHeight * 1.05;
+    };
+        
+    auto latToYUsed = latToYSimple;
     
-    for (const QString& path : possiblePaths) {
-        if (QFile::exists(path)) {
-            mapPath = path;
-            worldMap.load(path);
-            if (!worldMap.isNull()) {
-                fileLoaded = true;
-                break;
-            }
-        }
-    }
+    QPainterPath northAmerica;
+    northAmerica.moveTo(lonToX(-170), latToYUsed(65));
+    northAmerica.lineTo(lonToX(-165), latToYUsed(60));
+    northAmerica.lineTo(lonToX(-155), latToYUsed(58));
+    northAmerica.lineTo(lonToX(-145), latToYUsed(56));
+    northAmerica.lineTo(lonToX(-135), latToYUsed(55));
+    northAmerica.lineTo(lonToX(-130), latToYUsed(52));
+    northAmerica.lineTo(lonToX(-125), latToYUsed(50));
+    northAmerica.lineTo(lonToX(-120), latToYUsed(48));
+    northAmerica.lineTo(lonToX(-118), latToYUsed(45));
+    northAmerica.lineTo(lonToX(-115), latToYUsed(42));
+    northAmerica.lineTo(lonToX(-112), latToYUsed(38));
+    northAmerica.lineTo(lonToX(-110), latToYUsed(35));
+    northAmerica.lineTo(lonToX(-108), latToYUsed(32));
+    northAmerica.lineTo(lonToX(-105), latToYUsed(30));
+    northAmerica.lineTo(lonToX(-102), latToYUsed(28));
+    northAmerica.lineTo(lonToX(-100), latToYUsed(25));
+    northAmerica.lineTo(lonToX(-98), latToYUsed(22));
+    northAmerica.lineTo(lonToX(-96), latToYUsed(20));
+    northAmerica.lineTo(lonToX(-94), latToYUsed(18));
+    northAmerica.lineTo(lonToX(-92), latToYUsed(16));
+    northAmerica.lineTo(lonToX(-90), latToYUsed(14));
+    northAmerica.lineTo(lonToX(-88), latToYUsed(12));
+    northAmerica.lineTo(lonToX(-86), latToYUsed(10));
+    northAmerica.lineTo(lonToX(-84), latToYUsed(9));
+    northAmerica.lineTo(lonToX(-82), latToYUsed(8));
+    northAmerica.lineTo(lonToX(-80), latToYUsed(12));
+    northAmerica.lineTo(lonToX(-78), latToYUsed(18));
+    northAmerica.lineTo(lonToX(-76), latToYUsed(25));
+    northAmerica.lineTo(lonToX(-74), latToYUsed(30));
+    northAmerica.lineTo(lonToX(-72), latToYUsed(35));
+    northAmerica.lineTo(lonToX(-70), latToYUsed(40));
+    northAmerica.lineTo(lonToX(-68), latToYUsed(45));
+    northAmerica.lineTo(lonToX(-66), latToYUsed(48));
+    northAmerica.lineTo(lonToX(-64), latToYUsed(50));
+    northAmerica.lineTo(lonToX(-62), latToYUsed(52));
+    northAmerica.lineTo(lonToX(-60), latToYUsed(55));
+    northAmerica.lineTo(lonToX(-65), latToYUsed(60));
+    northAmerica.lineTo(lonToX(-70), latToYUsed(65));
+    northAmerica.lineTo(lonToX(-75), latToYUsed(68));
+    northAmerica.lineTo(lonToX(-80), latToYUsed(70));
+    northAmerica.lineTo(lonToX(-85), latToYUsed(72));
+    northAmerica.lineTo(lonToX(-90), latToYUsed(73));
+    northAmerica.lineTo(lonToX(-95), latToYUsed(74));
+    northAmerica.lineTo(lonToX(-100), latToYUsed(73));
+    northAmerica.lineTo(lonToX(-105), latToYUsed(72));
+    northAmerica.lineTo(lonToX(-110), latToYUsed(70));
+    northAmerica.lineTo(lonToX(-115), latToYUsed(68));
+    northAmerica.lineTo(lonToX(-120), latToYUsed(66));
+    northAmerica.lineTo(lonToX(-125), latToYUsed(64));
+    northAmerica.lineTo(lonToX(-130), latToYUsed(62));
+    northAmerica.lineTo(lonToX(-135), latToYUsed(60));
+    northAmerica.lineTo(lonToX(-140), latToYUsed(62));
+    northAmerica.lineTo(lonToX(-145), latToYUsed(64));
+    northAmerica.lineTo(lonToX(-150), latToYUsed(65));
+    northAmerica.lineTo(lonToX(-155), latToYUsed(66));
+    northAmerica.lineTo(lonToX(-160), latToYUsed(65));
+    northAmerica.closeSubpath();
     
-    QPixmap backgroundPixmap;
+    QPainterPath greenland;
+    greenland.moveTo(lonToX(-65), latToYUsed(60));
+    greenland.lineTo(lonToX(-60), latToYUsed(61));
+    greenland.lineTo(lonToX(-55), latToYUsed(63));
+    greenland.lineTo(lonToX(-50), latToYUsed(65));
+    greenland.lineTo(lonToX(-45), latToYUsed(68));
+    greenland.lineTo(lonToX(-40), latToYUsed(72));
+    greenland.lineTo(lonToX(-35), latToYUsed(75));
+    greenland.lineTo(lonToX(-30), latToYUsed(77));
+    greenland.lineTo(lonToX(-35), latToYUsed(79));
+    greenland.lineTo(lonToX(-40), latToYUsed(77));
+    greenland.lineTo(lonToX(-45), latToYUsed(75));
+    greenland.lineTo(lonToX(-50), latToYUsed(72));
+    greenland.lineTo(lonToX(-55), latToYUsed(69));
+    greenland.lineTo(lonToX(-60), latToYUsed(66));
+    greenland.lineTo(lonToX(-65), latToYUsed(63));
+    greenland.closeSubpath();
+            
+    QPainterPath southAmerica;
+    southAmerica.moveTo(lonToX(-95), latToYUsed(8));
+    southAmerica.lineTo(lonToX(-93), latToYUsed(5));
+    southAmerica.lineTo(lonToX(-91), latToYUsed(2));
+    southAmerica.lineTo(lonToX(-89), latToYUsed(0));
+    southAmerica.lineTo(lonToX(-87), latToYUsed(-2));
+    southAmerica.lineTo(lonToX(-85), latToYUsed(-5));
+    southAmerica.lineTo(lonToX(-83), latToYUsed(-10));
+    southAmerica.lineTo(lonToX(-81), latToYUsed(-15));
+    southAmerica.lineTo(lonToX(-79), latToYUsed(-20));
+    southAmerica.lineTo(lonToX(-77), latToYUsed(-25));
+    southAmerica.lineTo(lonToX(-75), latToYUsed(-30));
+    southAmerica.lineTo(lonToX(-73), latToYUsed(-35));
+    southAmerica.lineTo(lonToX(-71), latToYUsed(-40));
+    southAmerica.lineTo(lonToX(-69), latToYUsed(-45));
+    southAmerica.lineTo(lonToX(-67), latToYUsed(-50));
+    southAmerica.lineTo(lonToX(-65), latToYUsed(-52));
+    southAmerica.lineTo(lonToX(-63), latToYUsed(-54));
+    southAmerica.lineTo(lonToX(-61), latToYUsed(-52));
+    southAmerica.lineTo(lonToX(-59), latToYUsed(-50));
+    southAmerica.lineTo(lonToX(-57), latToYUsed(-48));
+    southAmerica.lineTo(lonToX(-55), latToYUsed(-46));
+    southAmerica.lineTo(lonToX(-53), latToYUsed(-44));
+    southAmerica.lineTo(lonToX(-51), latToYUsed(-42));
+    southAmerica.lineTo(lonToX(-49), latToYUsed(-40));
+    southAmerica.lineTo(lonToX(-47), latToYUsed(-38));
+    southAmerica.lineTo(lonToX(-45), latToYUsed(-36));
+    southAmerica.lineTo(lonToX(-43), latToYUsed(-34));
+    southAmerica.lineTo(lonToX(-41), latToYUsed(-32));
+    southAmerica.lineTo(lonToX(-39), latToYUsed(-30));
+    southAmerica.lineTo(lonToX(-37), latToYUsed(-28));
+    southAmerica.lineTo(lonToX(-35), latToYUsed(-26));
+    southAmerica.lineTo(lonToX(-33), latToYUsed(-24));
+    southAmerica.lineTo(lonToX(-31), latToYUsed(-22));
+    southAmerica.lineTo(lonToX(-29), latToYUsed(-20));
+    southAmerica.lineTo(lonToX(-27), latToYUsed(-18));
+    southAmerica.lineTo(lonToX(-25), latToYUsed(-16));
+    southAmerica.lineTo(lonToX(-23), latToYUsed(-14));
+    southAmerica.lineTo(lonToX(-21), latToYUsed(-12));
+    southAmerica.lineTo(lonToX(-19), latToYUsed(-10));
+    southAmerica.lineTo(lonToX(-17), latToYUsed(-8));
+    southAmerica.lineTo(lonToX(-15), latToYUsed(-6));
+    southAmerica.lineTo(lonToX(-13), latToYUsed(-4));
+    southAmerica.lineTo(lonToX(-11), latToYUsed(-2));
+    southAmerica.lineTo(lonToX(-9), latToYUsed(0));
+    southAmerica.lineTo(lonToX(-11), latToYUsed(2));
+    southAmerica.lineTo(lonToX(-13), latToYUsed(4));
+    southAmerica.lineTo(lonToX(-15), latToYUsed(6));
+    southAmerica.lineTo(lonToX(-17), latToYUsed(8));
+    southAmerica.lineTo(lonToX(-19), latToYUsed(10));
+    southAmerica.lineTo(lonToX(-85), latToYUsed(8));
+        
+    QPainterPath eurasia;
+    eurasia.moveTo(lonToX(-10), latToYUsed(45));
+    eurasia.lineTo(lonToX(-5), latToYUsed(50));
+    eurasia.lineTo(lonToX(0), latToYUsed(52));
+    eurasia.lineTo(lonToX(5), latToYUsed(55));
+    eurasia.lineTo(lonToX(10), latToYUsed(58));
+    eurasia.lineTo(lonToX(15), latToYUsed(60));
+    eurasia.lineTo(lonToX(20), latToYUsed(62));
+    eurasia.lineTo(lonToX(25), latToYUsed(64));
+    eurasia.lineTo(lonToX(30), latToYUsed(66));
+    eurasia.lineTo(lonToX(40), latToYUsed(68));
+    eurasia.lineTo(lonToX(50), latToYUsed(70));
+    eurasia.lineTo(lonToX(60), latToYUsed(72));
+    eurasia.lineTo(lonToX(70), latToYUsed(73));
+    eurasia.lineTo(lonToX(80), latToYUsed(72));
+    eurasia.lineTo(lonToX(90), latToYUsed(70));
+    eurasia.lineTo(lonToX(100), latToYUsed(68));
+    eurasia.lineTo(lonToX(110), latToYUsed(65));
+    eurasia.lineTo(lonToX(120), latToYUsed(62));
+    eurasia.lineTo(lonToX(130), latToYUsed(58));
+    eurasia.lineTo(lonToX(140), latToYUsed(55));
+    eurasia.lineTo(lonToX(150), latToYUsed(52));
+    eurasia.lineTo(lonToX(145), latToYUsed(48));
+    eurasia.lineTo(lonToX(140), latToYUsed(42));
+    eurasia.lineTo(lonToX(135), latToYUsed(38));
+    eurasia.lineTo(lonToX(130), latToYUsed(35));
+    eurasia.lineTo(lonToX(125), latToYUsed(32));
+    eurasia.lineTo(lonToX(120), latToYUsed(30));
+    eurasia.lineTo(lonToX(115), latToYUsed(28));
+    eurasia.lineTo(lonToX(110), latToYUsed(25));
+    eurasia.lineTo(lonToX(105), latToYUsed(22));
+    eurasia.lineTo(lonToX(100), latToYUsed(20));
+    eurasia.lineTo(lonToX(95), latToYUsed(18));
+    eurasia.lineTo(lonToX(90), latToYUsed(16));
+    eurasia.lineTo(lonToX(85), latToYUsed(14));
+    eurasia.lineTo(lonToX(80), latToYUsed(12));
+    eurasia.lineTo(lonToX(75), latToYUsed(10));
+    eurasia.lineTo(lonToX(70), latToYUsed(12));
+    eurasia.lineTo(lonToX(65), latToYUsed(14));
+    eurasia.lineTo(lonToX(60), latToYUsed(16));
+    eurasia.lineTo(lonToX(55), latToYUsed(18));
+    eurasia.lineTo(lonToX(50), latToYUsed(20));
+    eurasia.lineTo(lonToX(45), latToYUsed(22));
+    eurasia.lineTo(lonToX(40), latToYUsed(24));
+    eurasia.lineTo(lonToX(35), latToYUsed(26));
+    eurasia.lineTo(lonToX(30), latToYUsed(28));
+    eurasia.lineTo(lonToX(25), latToYUsed(30));
+    eurasia.lineTo(lonToX(20), latToYUsed(32));
+    eurasia.lineTo(lonToX(15), latToYUsed(34));
+    eurasia.lineTo(lonToX(10), latToYUsed(36));
+    eurasia.lineTo(lonToX(5), latToYUsed(38));
+    eurasia.lineTo(lonToX(0), latToYUsed(40));
+    eurasia.lineTo(lonToX(-5), latToYUsed(42));
+    eurasia.closeSubpath();
+    
+    QPainterPath africa;
+    africa.moveTo(lonToX(-18), latToYUsed(32));
+    africa.lineTo(lonToX(-10), latToYUsed(33));
+    africa.lineTo(lonToX(-5), latToYUsed(34));
+    africa.lineTo(lonToX(0), latToYUsed(35));
+    africa.lineTo(lonToX(5), latToYUsed(34));
+    africa.lineTo(lonToX(10), latToYUsed(33));
+    africa.lineTo(lonToX(15), latToYUsed(32));
+    africa.lineTo(lonToX(20), latToYUsed(31));
+    africa.lineTo(lonToX(25), latToYUsed(30));
+    africa.lineTo(lonToX(30), latToYUsed(29));
+    africa.lineTo(lonToX(32), latToYUsed(26));
+    africa.lineTo(lonToX(34), latToYUsed(22));
+    africa.lineTo(lonToX(36), latToYUsed(18));
+    africa.lineTo(lonToX(38), latToYUsed(14));
+    africa.lineTo(lonToX(40), latToYUsed(10));
+    africa.lineTo(lonToX(42), latToYUsed(6));
+    africa.lineTo(lonToX(43), latToYUsed(2));
+    africa.lineTo(lonToX(42), latToYUsed(0));
+    africa.lineTo(lonToX(40), latToYUsed(-2));
+    africa.lineTo(lonToX(38), latToYUsed(-4));
+    africa.lineTo(lonToX(36), latToYUsed(-6));
+    africa.lineTo(lonToX(34), latToYUsed(-8));
+    africa.lineTo(lonToX(32), latToYUsed(-10));
+    africa.lineTo(lonToX(30), latToYUsed(-12));
+    africa.lineTo(lonToX(28), latToYUsed(-14));
+    africa.lineTo(lonToX(26), latToYUsed(-16));
+    africa.lineTo(lonToX(24), latToYUsed(-18));
+    africa.lineTo(lonToX(22), latToYUsed(-20));
+    africa.lineTo(lonToX(20), latToYUsed(-22));
+    africa.lineTo(lonToX(18), latToYUsed(-24));
+    africa.lineTo(lonToX(16), latToYUsed(-26));
+    africa.lineTo(lonToX(14), latToYUsed(-28));
+    africa.lineTo(lonToX(12), latToYUsed(-30));
+    africa.lineTo(lonToX(10), latToYUsed(-32));
+    africa.lineTo(lonToX(8), latToYUsed(-34));
+    africa.lineTo(lonToX(6), latToYUsed(-32));
+    africa.lineTo(lonToX(4), latToYUsed(-30));
+    africa.lineTo(lonToX(2), latToYUsed(-28));
+    africa.lineTo(lonToX(0), latToYUsed(-26));
+    africa.lineTo(lonToX(-2), latToYUsed(-24));
+    africa.lineTo(lonToX(-4), latToYUsed(-22));
+    africa.lineTo(lonToX(-6), latToYUsed(-20));
+    africa.lineTo(lonToX(-8), latToYUsed(-18));
+    africa.lineTo(lonToX(-10), latToYUsed(-16));
+    africa.lineTo(lonToX(-12), latToYUsed(-14));
+    africa.lineTo(lonToX(-14), latToYUsed(-12));
+    africa.lineTo(lonToX(-16), latToYUsed(-10));
+    africa.lineTo(lonToX(-15), latToYUsed(-8));
+    africa.lineTo(lonToX(-14), latToYUsed(-6));
+    africa.lineTo(lonToX(-13), latToYUsed(-4));
+    africa.lineTo(lonToX(-12), latToYUsed(-2));
+    africa.lineTo(lonToX(-11), latToYUsed(0));
+    africa.lineTo(lonToX(-10), latToYUsed(2));
+    africa.lineTo(lonToX(-9), latToYUsed(4));
+    africa.lineTo(lonToX(-8), latToYUsed(6));
+    africa.lineTo(lonToX(-7), latToYUsed(8));
+    africa.lineTo(lonToX(-6), latToYUsed(10));
+    africa.lineTo(lonToX(-5), latToYUsed(12));
+    africa.lineTo(lonToX(-6), latToYUsed(14));
+    africa.lineTo(lonToX(-7), latToYUsed(16));
+    africa.lineTo(lonToX(-8), latToYUsed(18));
+    africa.lineTo(lonToX(-9), latToYUsed(20));
+    africa.lineTo(lonToX(-10), latToYUsed(22));
+    africa.lineTo(lonToX(-11), latToYUsed(24));
+    africa.lineTo(lonToX(-12), latToYUsed(26));
+    africa.lineTo(lonToX(-13), latToYUsed(28));
+    africa.lineTo(lonToX(-14), latToYUsed(30));
+    africa.lineTo(lonToX(-15), latToYUsed(32));
+    africa.closeSubpath();
 
-    QGraphicsPixmapItem *backgroundItem = new QGraphicsPixmapItem(backgroundPixmap);
-    if (!backgroundItem) {
-        return;
+    QPainterPath australia;
+    australia.moveTo(lonToX(115), latToYUsed(-12));
+    australia.lineTo(lonToX(125), latToYUsed(-15));
+    australia.lineTo(lonToX(135), latToYUsed(-18));
+    australia.lineTo(lonToX(145), latToYUsed(-25));
+    australia.lineTo(lonToX(150), latToYUsed(-32));
+    australia.lineTo(lonToX(145), latToYUsed(-37));
+    australia.lineTo(lonToX(140), latToYUsed(-35));
+    australia.lineTo(lonToX(135), latToYUsed(-33));
+    australia.lineTo(lonToX(130), latToYUsed(-30));
+    australia.lineTo(lonToX(125), latToYUsed(-28));
+    australia.lineTo(lonToX(120), latToYUsed(-26));
+    australia.lineTo(lonToX(115), latToYUsed(-24));
+    australia.lineTo(lonToX(110), latToYUsed(-22));
+    australia.lineTo(lonToX(112), latToYUsed(-18));
+    australia.lineTo(lonToX(114), latToYUsed(-15));
+    australia.closeSubpath();
+
+    QPainterPath antarctica;
+    antarctica.moveTo(lonToX(-180), latToYUsed(-80));
+    for (int lon = -180; lon <= 180; lon += 5) {
+        double lat = -78 + 2 * sin(lon * 0.03) + 1.5 * cos(lon * 0.05);
+        antarctica.lineTo(lonToX(lon), latToYUsed(lat));
     }
+    antarctica.lineTo(lonToX(180), latToYUsed(-80));
+    antarctica.lineTo(lonToX(-180), latToYUsed(-80));
+    antarctica.closeSubpath();
+
+    QPen continentPen(QColor(50, 50, 50), 1.2);
     
+    painter.setPen(continentPen);
+    painter.setBrush(QBrush(QColor(173, 216, 230, 180)));
+    painter.drawPath(northAmerica);
+    
+    painter.setBrush(QBrush(QColor(240, 248, 255, 200)));
+    painter.drawPath(greenland);
+    
+    painter.setBrush(QBrush(QColor(255, 165, 0, 180)));
+    painter.drawPath(southAmerica);
+    
+    painter.setBrush(QBrush(QColor(144, 238, 144, 180)));
+    painter.drawPath(eurasia);
+    
+    painter.setBrush(QBrush(QColor(255, 255, 100, 180)));
+    painter.drawPath(africa);
+    
+    painter.setBrush(QBrush(QColor(255, 182, 193, 180)));
+    painter.drawPath(australia);
+    
+    painter.setBrush(QBrush(QColor(176, 224, 230, 200)));
+    painter.drawPath(antarctica);
+    
+    QFont font = painter.font();
+    font.setPointSize(9);
+    font.setBold(true);
+    painter.setFont(font);
+    painter.setPen(QColor(30, 30, 30, 200));
+    
+    painter.drawText(lonToX(-100), latToYUsed(55), "Сев. Америка");
+    painter.drawText(lonToX(-40), latToYUsed(75), "Гренландия");
+    painter.drawText(lonToX(-50), latToYUsed(-25), "Юж. Америка");
+    painter.drawText(lonToX(30), latToYUsed(55), "Евразия");
+    painter.drawText(lonToX(15), latToYUsed(5), "Африка");
+    painter.drawText(lonToX(125), latToYUsed(-25), "Австралия");
+    painter.drawText(lonToX(0), latToYUsed(-80), "Антарктида"); 
+    
+    painter.setPen(QPen(QColor(100, 100, 200, 60), 0.5));
+    
+    painter.setPen(QPen(QColor(100, 100, 255, 100), 1.0, Qt::DashLine));
+    painter.drawLine(0, latToYUsed(0), sceneWidth, latToYUsed(0));
+    
+    painter.setPen(QPen(QColor(255, 100, 100, 80), 0.5));
+    painter.drawLine(0, latToYUsed(23.5), sceneWidth, latToYUsed(23.5));
+    painter.drawLine(0, latToYUsed(-23.5), sceneWidth, latToYUsed(-23.5));
+    
+    painter.setPen(QPen(QColor(100, 200, 255, 80), 0.5));
+    painter.drawLine(0, latToYUsed(66.5), sceneWidth, latToYUsed(66.5));
+    painter.drawLine(0, latToYUsed(-66.5), sceneWidth, latToYUsed(-66.5));
+    
+    painter.end();
+    
+    QGraphicsPixmapItem* backgroundItem = new QGraphicsPixmapItem(backgroundPixmap);
     backgroundItem->setZValue(-1000);
-    backgroundItem->setOpacity(0.7);   
-    
-    backgroundItem->setPos(0, 0);
-    
+    backgroundItem->setOpacity(0.85);
     scene->addItem(backgroundItem);
     mapBackground = backgroundItem;
 }

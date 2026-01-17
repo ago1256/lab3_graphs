@@ -24,7 +24,6 @@ set(APP_SOURCES
 set(GRAPH_SOURCES
     graph/graph.cpp
     graph/graph.h
-    structs_for_graph/structs_for_graph.cpp
     structs_for_graph/structs_for_graph.h
     errors/errors.cpp
     errors/errors.h
@@ -51,6 +50,7 @@ target_link_libraries(GraphVisualizer PRIVATE
     Qt6::Core
     Qt6::Widgets
 )
+
 
 if(WIN32)
     function(copy_qt6_dll target)
@@ -113,8 +113,6 @@ if(WIN32)
 endif()
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data)
-
-message(STATUS "Project configured successfully")
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/data")
     add_custom_command(TARGET GraphVisualizer POST_BUILD

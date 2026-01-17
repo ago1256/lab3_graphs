@@ -19,26 +19,14 @@ struct Vertex {
 };
 
 struct Edge {
-    std::string id;     
-    std::string start;   
-    std::string finish; 
-    std::vector<int> params;   
-    std::vector<double> weights; 
+    std::string start;
+    std::string finish;
+    std::vector<int> params;
     
-    Edge() = default;  
-    Edge(const std::string& start_id, const std::string& finish_id, 
-         const std::vector<int>& d = {}, const std::vector<double>& w = {}) 
-        : start(start_id), 
-          finish(finish_id), 
-          id(start_id + "_" + finish_id),
-          params(d),
-          weights(w) 
-    {
-        if (weights.empty()) {
-            weights.resize(params.size(), 1.0);
-        }
-    }
+    Edge() = default; 
+    
+    Edge(const std::string& s, const std::string& f, 
+         const std::vector<int>& p = {}) 
+        : start(s), finish(f), params(p) {}
 };
 
-
-double get_weighted_cost(const Edge& edge, const std::vector<bool>& consider_params); 

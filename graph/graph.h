@@ -25,8 +25,7 @@ public:
     Graph(const std::vector<std::string>& vert_names);
     ~Graph();
     
-    void add_edge(const std::string& from_name, const std::string& to_name, const std::vector<int>& data = {}, 
-                  const std::vector<double>& weights = {});
+    void add_edge(const std::string& from_name, const std::string& to_name, const std::vector<int>& data = {});
     void remove_vertex(const std::string& vertex_name);
     void remove_edge(const std::string& from_name, const std::string& to_name);
     

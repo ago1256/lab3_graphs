@@ -65,6 +65,7 @@ private:
     
     void drawFlightLine(const Edge& edge);
     void loadMapToScene();
+    void createDefaultBackground();
     
     std::string getNameById(const std::string& id) const;
     std::string getIdByName(const std::string& name) const;
