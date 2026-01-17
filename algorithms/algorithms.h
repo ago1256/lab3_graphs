@@ -35,6 +35,13 @@ void relax_edges(const Graph& graph,  const Path& curr_path,  const std::vector<
 Path dijkstra_alg(const Graph& graph, const std::string& start, const std::string& finish,
            const std::vector<bool>& consider_params, const std::vector<double>& weights);
     
+void relax_edges_all_paths(const Graph& graph, const Path& curr_path,
+     const std::vector<bool>& consider_params, const std::vector<double>& weights,
+                          std::unordered_map<std::string, double>& best_sums,
+                          std::unordered_map<std::string, std::vector<Path>>& best_paths,
+                          std::priority_queue<std::pair<double, Path>, std::vector<std::pair<double, Path>>,
+                           std::greater<std::pair<double, Path>>>& pq);
+
 std::vector<Path> dijkstra_all_optimal_paths(const Graph& graph, const std::string& start, 
                                             const std::string& finish, const std::vector<bool>& consider_params,
                                             const std::vector<double>& weights);

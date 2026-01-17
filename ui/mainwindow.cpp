@@ -594,7 +594,7 @@ void MainWindow::loadDefaultGraph()
             
             if (!cities.empty()) {
                 try {
-                    graph->generate_graph(cities, 17, 3);
+                    graph->generate_graph(cities, 16, 3);
                 } catch (const std::exception& e) {
                 }
             }
@@ -729,7 +729,7 @@ void MainWindow::onFindPath()
         if (all_paths.size() == 1) {
             htmlDetails += "<b>Найден 1 оптимальный путь:</b><br><br>";
         } else {
-            htmlDetails += QString("<b>Найдено %1 оптимальных путей (одинаковая стоимость):</b><br><br>")
+            htmlDetails += QString("<b>Найдено %1 оптимальных путей:</b><br><br>")
                           .arg(all_paths.size());
         }
         
@@ -1625,56 +1625,56 @@ void MainWindow::loadMapToScene()
     greenland.closeSubpath();
             
     QPainterPath southAmerica;
-    southAmerica.moveTo(lonToX(-95), latToYUsed(8));
-    southAmerica.lineTo(lonToX(-93), latToYUsed(5));
-    southAmerica.lineTo(lonToX(-91), latToYUsed(2));
-    southAmerica.lineTo(lonToX(-89), latToYUsed(0));
-    southAmerica.lineTo(lonToX(-87), latToYUsed(-2));
-    southAmerica.lineTo(lonToX(-85), latToYUsed(-5));
-    southAmerica.lineTo(lonToX(-83), latToYUsed(-10));
-    southAmerica.lineTo(lonToX(-81), latToYUsed(-15));
-    southAmerica.lineTo(lonToX(-79), latToYUsed(-20));
-    southAmerica.lineTo(lonToX(-77), latToYUsed(-25));
-    southAmerica.lineTo(lonToX(-75), latToYUsed(-30));
-    southAmerica.lineTo(lonToX(-73), latToYUsed(-35));
-    southAmerica.lineTo(lonToX(-71), latToYUsed(-40));
-    southAmerica.lineTo(lonToX(-69), latToYUsed(-45));
-    southAmerica.lineTo(lonToX(-67), latToYUsed(-50));
-    southAmerica.lineTo(lonToX(-65), latToYUsed(-52));
-    southAmerica.lineTo(lonToX(-63), latToYUsed(-54));
-    southAmerica.lineTo(lonToX(-61), latToYUsed(-52));
-    southAmerica.lineTo(lonToX(-59), latToYUsed(-50));
-    southAmerica.lineTo(lonToX(-57), latToYUsed(-48));
-    southAmerica.lineTo(lonToX(-55), latToYUsed(-46));
-    southAmerica.lineTo(lonToX(-53), latToYUsed(-44));
-    southAmerica.lineTo(lonToX(-51), latToYUsed(-42));
-    southAmerica.lineTo(lonToX(-49), latToYUsed(-40));
-    southAmerica.lineTo(lonToX(-47), latToYUsed(-38));
-    southAmerica.lineTo(lonToX(-45), latToYUsed(-36));
-    southAmerica.lineTo(lonToX(-43), latToYUsed(-34));
-    southAmerica.lineTo(lonToX(-41), latToYUsed(-32));
-    southAmerica.lineTo(lonToX(-39), latToYUsed(-30));
-    southAmerica.lineTo(lonToX(-37), latToYUsed(-28));
-    southAmerica.lineTo(lonToX(-35), latToYUsed(-26));
-    southAmerica.lineTo(lonToX(-33), latToYUsed(-24));
-    southAmerica.lineTo(lonToX(-31), latToYUsed(-22));
-    southAmerica.lineTo(lonToX(-29), latToYUsed(-20));
-    southAmerica.lineTo(lonToX(-27), latToYUsed(-18));
-    southAmerica.lineTo(lonToX(-25), latToYUsed(-16));
-    southAmerica.lineTo(lonToX(-23), latToYUsed(-14));
-    southAmerica.lineTo(lonToX(-21), latToYUsed(-12));
-    southAmerica.lineTo(lonToX(-19), latToYUsed(-10));
-    southAmerica.lineTo(lonToX(-17), latToYUsed(-8));
-    southAmerica.lineTo(lonToX(-15), latToYUsed(-6));
-    southAmerica.lineTo(lonToX(-13), latToYUsed(-4));
-    southAmerica.lineTo(lonToX(-11), latToYUsed(-2));
-    southAmerica.lineTo(lonToX(-9), latToYUsed(0));
-    southAmerica.lineTo(lonToX(-11), latToYUsed(2));
-    southAmerica.lineTo(lonToX(-13), latToYUsed(4));
-    southAmerica.lineTo(lonToX(-15), latToYUsed(6));
-    southAmerica.lineTo(lonToX(-17), latToYUsed(8));
-    southAmerica.lineTo(lonToX(-19), latToYUsed(10));
-    southAmerica.lineTo(lonToX(-85), latToYUsed(8));
+    southAmerica.moveTo(lonToX(-105), latToYUsed(8));
+    southAmerica.lineTo(lonToX(-103), latToYUsed(5));
+    southAmerica.lineTo(lonToX(-101), latToYUsed(2));
+    southAmerica.lineTo(lonToX(-99), latToYUsed(0));
+    southAmerica.lineTo(lonToX(-97), latToYUsed(-2));
+    southAmerica.lineTo(lonToX(-95), latToYUsed(-5));
+    southAmerica.lineTo(lonToX(-93), latToYUsed(-10));
+    southAmerica.lineTo(lonToX(-91), latToYUsed(-15));
+    southAmerica.lineTo(lonToX(-89), latToYUsed(-20));
+    southAmerica.lineTo(lonToX(-87), latToYUsed(-25));
+    southAmerica.lineTo(lonToX(-85), latToYUsed(-30));
+    southAmerica.lineTo(lonToX(-83), latToYUsed(-35));
+    southAmerica.lineTo(lonToX(-81), latToYUsed(-40));
+    southAmerica.lineTo(lonToX(-79), latToYUsed(-45));
+    southAmerica.lineTo(lonToX(-77), latToYUsed(-50));
+    southAmerica.lineTo(lonToX(-75), latToYUsed(-52));
+    southAmerica.lineTo(lonToX(-73), latToYUsed(-54));
+    southAmerica.lineTo(lonToX(-71), latToYUsed(-52));
+    southAmerica.lineTo(lonToX(-69), latToYUsed(-50));
+    southAmerica.lineTo(lonToX(-67), latToYUsed(-48));
+    southAmerica.lineTo(lonToX(-65), latToYUsed(-46));
+    southAmerica.lineTo(lonToX(-63), latToYUsed(-44));
+    southAmerica.lineTo(lonToX(-61), latToYUsed(-42));
+    southAmerica.lineTo(lonToX(-59), latToYUsed(-40));
+    southAmerica.lineTo(lonToX(-57), latToYUsed(-38));
+    southAmerica.lineTo(lonToX(-55), latToYUsed(-36));
+    southAmerica.lineTo(lonToX(-53), latToYUsed(-34));
+    southAmerica.lineTo(lonToX(-51), latToYUsed(-32));
+    southAmerica.lineTo(lonToX(-49), latToYUsed(-30));
+    southAmerica.lineTo(lonToX(-47), latToYUsed(-28));
+    southAmerica.lineTo(lonToX(-45), latToYUsed(-26));
+    southAmerica.lineTo(lonToX(-43), latToYUsed(-24));
+    southAmerica.lineTo(lonToX(-41), latToYUsed(-22));
+    southAmerica.lineTo(lonToX(-39), latToYUsed(-20));
+    southAmerica.lineTo(lonToX(-37), latToYUsed(-18));
+    southAmerica.lineTo(lonToX(-35), latToYUsed(-16));
+    southAmerica.lineTo(lonToX(-33), latToYUsed(-14));
+    southAmerica.lineTo(lonToX(-31), latToYUsed(-12));
+    southAmerica.lineTo(lonToX(-29), latToYUsed(-10));
+    southAmerica.lineTo(lonToX(-27), latToYUsed(-8));
+    southAmerica.lineTo(lonToX(-25), latToYUsed(-6));
+    southAmerica.lineTo(lonToX(-23), latToYUsed(-4));
+    southAmerica.lineTo(lonToX(-21), latToYUsed(-2));
+    southAmerica.lineTo(lonToX(-19), latToYUsed(0));
+    southAmerica.lineTo(lonToX(-21), latToYUsed(2));
+    southAmerica.lineTo(lonToX(-23), latToYUsed(4));
+    southAmerica.lineTo(lonToX(-25), latToYUsed(6));
+    southAmerica.lineTo(lonToX(-27), latToYUsed(8));
+    southAmerica.lineTo(lonToX(-29), latToYUsed(10));
+    southAmerica.lineTo(lonToX(-95), latToYUsed(8));
         
     QPainterPath eurasia;
     eurasia.moveTo(lonToX(-10), latToYUsed(45));
@@ -1862,7 +1862,7 @@ void MainWindow::loadMapToScene()
     
     painter.drawText(lonToX(-100), latToYUsed(55), "Сев. Америка");
     painter.drawText(lonToX(-40), latToYUsed(75), "Гренландия");
-    painter.drawText(lonToX(-50), latToYUsed(-25), "Юж. Америка");
+    painter.drawText(lonToX(-70), latToYUsed(-25), "Юж. Америка");
     painter.drawText(lonToX(30), latToYUsed(55), "Евразия");
     painter.drawText(lonToX(15), latToYUsed(5), "Африка");
     painter.drawText(lonToX(125), latToYUsed(-25), "Австралия");

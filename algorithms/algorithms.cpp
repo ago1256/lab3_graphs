@@ -60,6 +60,34 @@ Path dijkstra_alg(const Graph& graph, const std::string& start, const std::strin
     return Path();
 }
 
+void relax_edges_all_paths(const Graph& graph, const Path& curr_path,
+     const std::vector<bool>& consider_params, const std::vector<double>& weights,
+                          std::unordered_map<std::string, double>& best_sums,
+                          std::unordered_map<std::string, std::vector<Path>>& best_paths,
+                          std::priority_queue<std::pair<double, Path>, std::vector<std::pair<double, Path>>, 
+                          std::greater<std::pair<double, Path>>>& pq) {
+    
+    std::string curr_vertex_name = curr_path.verts.back();
+    std::vector<std::string> neighbors = graph.get_to_vertices(curr_vertex_name);
+    
+    for (const auto& neighbor_name : neighbors) {
+        Path new_path = add_edge_to_path(graph, curr_path, curr_vertex_name, neighbor_name, consider_params, weights);
+        double new_sum = new_path.weighted_sum;
+        
+        if (best_sums.find(neighbor_name) == best_sums.end() || new_sum < best_sums[neighbor_name] - 1e-10) {
+            
+            best_sums[neighbor_name] = new_sum;
+            best_paths[neighbor_name] = {new_path};  
+            pq.push({new_sum, new_path});
+            
+        } 
+        else if (std::abs(new_sum - best_sums[neighbor_name]) < 1e-10) {
+            best_paths[neighbor_name].push_back(new_path);
+            pq.push({new_sum, new_path});
+        }
+    }
+}
+
 std::vector<Path> dijkstra_all_optimal_paths(const Graph& graph, const std::string& start, 
                                             const std::string& finish, const std::vector<bool>& consider_params,
                                             const std::vector<double>& weights) {
@@ -68,9 +96,9 @@ std::vector<Path> dijkstra_all_optimal_paths(const Graph& graph, const std::stri
         return {};
     }
     
-    std::priority_queue<std::pair<double, Path>,  std::vector<std::pair<double, Path>>, 
-                        std::greater<std::pair<double, Path>>> pq;
-
+    std::priority_queue<std::pair<double, Path>,    std::vector<std::pair<double, Path>>,
+                     std::greater<std::pair<double, Path>>> pq;
+    
     std::unordered_map<std::string, double> best_sums;
     std::unordered_map<std::string, std::vector<Path>> best_paths;
     std::vector<Path> result_paths;
@@ -95,28 +123,13 @@ std::vector<Path> dijkstra_all_optimal_paths(const Graph& graph, const std::stri
         }
 
         if (curr_vertex == finish) {
-            if (result_paths.empty() || abs(curr_sum - result_paths[0].weighted_sum) < 1e-10) {
+            if (result_paths.empty() || std::abs(curr_sum - result_paths[0].weighted_sum) < 1e-10) {
                 result_paths.push_back(curr_path);
             }
             continue;
         }
         
-        std::vector<std::string> neighbors = graph.get_to_vertices(curr_vertex);
-        
-        for (const auto& neighbor_name : neighbors) {
-            Path new_path = add_edge_to_path(graph, curr_path, curr_vertex, neighbor_name, consider_params, weights);
-            
-            if (best_sums.find(neighbor_name) == best_sums.end() || new_path.weighted_sum < best_sums[neighbor_name]) {
-                best_sums[neighbor_name] = new_path.weighted_sum;
-                best_paths[neighbor_name] = {new_path};
-                pq.push({new_path.weighted_sum, new_path});
-                
-            } 
-            else if (abs(new_path.weighted_sum - best_sums[neighbor_name]) < 1e-10) {
-                best_paths[neighbor_name].push_back(new_path);
-                pq.push({new_path.weighted_sum, new_path});
-            }
-        }
+        relax_edges_all_paths(graph, curr_path, consider_params, weights, best_sums, best_paths, pq);
     }
     
     return result_paths;
@@ -130,17 +143,7 @@ std::vector<std::vector<std::string>> find_scc(const Graph& graph) {
     std::vector<std::vector<std::string>> components;
     std::unordered_map<std::string, bool> visited;
     std::vector<std::string> order;
-    
-    std::unordered_map<std::string, std::string> id_to_name;
-    for (const auto& [id, vertex] : vertices) {
-        id_to_name[id] = vertex.name;
-    }
-    
-    std::unordered_map<std::string, std::string> name_to_id;
-    for (const auto& [id, vertex] : vertices) {
-        name_to_id[vertex.name] = id;
-    }
-    
+ 
     for (const auto& [id, vertex] : vertices) {
         if (visited[id]) continue;
         
